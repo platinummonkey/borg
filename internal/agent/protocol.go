@@ -16,10 +16,11 @@ type ProtocolHandler func(*protocol.Message)
 // handler. It dispatches parsed protocol messages to registered handlers and
 // updates the state and context stores.
 type ProtocolDispatcher struct {
-	client   ircclient.Client
-	state    *StateStore
-	context  *ContextStore
-	selfNick func() string
+	client          ircclient.Client
+	state           *StateStore
+	context         *ContextStore
+	selfNick        func() string
+	unblockNotifier *UnblockNotifier
 
 	mu       sync.RWMutex
 	handlers map[int]ProtocolHandler
@@ -28,13 +29,15 @@ type ProtocolDispatcher struct {
 
 // NewProtocolDispatcher creates a dispatcher wired to the given stores and client.
 func NewProtocolDispatcher(client ircclient.Client, state *StateStore, context *ContextStore) *ProtocolDispatcher {
-	return &ProtocolDispatcher{
+	pd := &ProtocolDispatcher{
 		client:   client,
 		state:    state,
 		context:  context,
 		selfNick: client.Nick,
 		handlers: make(map[int]ProtocolHandler),
 	}
+	pd.unblockNotifier = NewUnblockNotifier(state, client, client.Nick)
+	return pd
 }
 
 // Register hooks the dispatcher into the client's OnMessage handler.
@@ -61,6 +64,26 @@ func (pd *ProtocolDispatcher) RemoveProtocolHandler(id int) {
 	pd.mu.Lock()
 	defer pd.mu.Unlock()
 	delete(pd.handlers, id)
+}
+
+// updateLocalState updates the stores for a message the agent itself is sending.
+// This ensures the agent's own state reflects its own actions, since the
+// dispatcher skips self-echo from IRC.
+func (pd *ProtocolDispatcher) updateLocalState(msg *protocol.Message) {
+	switch msg.Action {
+	case protocol.ActionStarted, protocol.ActionCompleted, protocol.ActionBlocked, protocol.ActionAcknowledged:
+		pd.state.UpdateTask(msg)
+		if taskName := msg.Get("task"); taskName != "" {
+			pd.state.UpdateAgentStatus(msg.Nick, msg.Channel, taskName)
+		}
+	}
+
+	switch msg.Action {
+	case protocol.ActionContext:
+		pd.context.Store(msg)
+	case protocol.ActionSharingContext:
+		pd.context.StorePayload(msg)
+	}
 }
 
 func (pd *ProtocolDispatcher) handleMessage(ev ircclient.MessageEvent) {
@@ -95,6 +118,9 @@ func (pd *ProtocolDispatcher) handleMessage(ev ircclient.MessageEvent) {
 		if taskName := msg.Get("task"); taskName != "" {
 			pd.state.UpdateAgentStatus(msg.Nick, msg.Channel, taskName)
 		}
+		if msg.Action == protocol.ActionCompleted {
+			pd.unblockNotifier.OnTaskCompleted(msg)
+		}
 	}
 
 	// Update context store.
@@ -104,6 +130,7 @@ func (pd *ProtocolDispatcher) handleMessage(ev ircclient.MessageEvent) {
 	case protocol.ActionSharingContext:
 		pd.context.StorePayload(msg)
 	case protocol.ActionRequestContext:
+		pd.context.TrackRequest(msg)
 		pd.context.HandleContextRequest(msg, pd.client)
 	}
 

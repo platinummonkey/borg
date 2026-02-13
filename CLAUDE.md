@@ -169,10 +169,10 @@ IRC server logging provides:
 - [x] Status announcement system
 
 ### Phase 3: Coordination Features
-- [ ] Dependency graph tracking
-- [ ] Automatic unblocking notifications
-- [ ] Context request/response system
-- [ ] Human operator notifications
+- [x] Dependency graph tracking
+- [x] Automatic unblocking notifications
+- [x] Context request/response system
+- [x] Human operator notifications
 
 ### Phase 4: Monitoring and Tooling
 - [ ] Agent health monitoring

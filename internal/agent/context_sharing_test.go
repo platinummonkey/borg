@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -149,5 +150,202 @@ func TestContextStore_Update(t *testing.T) {
 	entry := cs.Get("auth")
 	if entry.Status != "v2" {
 		t.Errorf("Status = %q, want %q (should be updated)", entry.Status, "v2")
+	}
+}
+
+func TestContextStore_TrackRequest(t *testing.T) {
+	cs := NewContextStore()
+	cs.TrackRequest(&protocol.Message{
+		Action:    protocol.ActionRequestContext,
+		Fields:    map[string]string{"component": "auth"},
+		Nick:      "agent-1",
+		Channel:   "#project",
+		Timestamp: time.Now(),
+	})
+
+	pending := cs.PendingRequests()
+	if len(pending) != 1 {
+		t.Fatalf("PendingRequests = %d, want 1", len(pending))
+	}
+	if pending[0].Component != "auth" {
+		t.Errorf("Component = %q, want %q", pending[0].Component, "auth")
+	}
+	if pending[0].RequestedBy != "agent-1" {
+		t.Errorf("RequestedBy = %q, want %q", pending[0].RequestedBy, "agent-1")
+	}
+}
+
+func TestContextStore_TrackRequest_EmptyComponent(t *testing.T) {
+	cs := NewContextStore()
+	cs.TrackRequest(&protocol.Message{
+		Action:    protocol.ActionRequestContext,
+		Fields:    map[string]string{},
+		Nick:      "agent-1",
+		Timestamp: time.Now(),
+	})
+
+	pending := cs.PendingRequests()
+	if len(pending) != 0 {
+		t.Errorf("PendingRequests = %d, want 0 for empty component", len(pending))
+	}
+}
+
+func TestContextStore_FulfillRequest(t *testing.T) {
+	cs := NewContextStore()
+	cs.TrackRequest(&protocol.Message{
+		Action:    protocol.ActionRequestContext,
+		Fields:    map[string]string{"component": "auth"},
+		Nick:      "agent-1",
+		Timestamp: time.Now(),
+	})
+
+	cs.FulfillRequest("auth")
+
+	pending := cs.PendingRequests()
+	if len(pending) != 0 {
+		t.Errorf("PendingRequests after fulfill = %d, want 0", len(pending))
+	}
+}
+
+func TestContextStore_StoreFulfillsRequests(t *testing.T) {
+	cs := NewContextStore()
+	cs.TrackRequest(&protocol.Message{
+		Action:    protocol.ActionRequestContext,
+		Fields:    map[string]string{"component": "auth"},
+		Nick:      "agent-1",
+		Timestamp: time.Now(),
+	})
+
+	// Store a context for "auth" — should auto-fulfill the request.
+	cs.Store(&protocol.Message{
+		Action:    protocol.ActionContext,
+		Fields:    map[string]string{"component": "auth", "status": "ready"},
+		Nick:      "agent-2",
+		Timestamp: time.Now(),
+	})
+
+	pending := cs.PendingRequests()
+	if len(pending) != 0 {
+		t.Errorf("PendingRequests after Store = %d, want 0", len(pending))
+	}
+}
+
+func TestContextStore_TimedOutRequests(t *testing.T) {
+	cs := NewContextStore()
+	cs.TrackRequest(&protocol.Message{
+		Action:    protocol.ActionRequestContext,
+		Fields:    map[string]string{"component": "old-req"},
+		Nick:      "agent-1",
+		Timestamp: time.Now().Add(-10 * time.Second),
+	})
+	cs.TrackRequest(&protocol.Message{
+		Action:    protocol.ActionRequestContext,
+		Fields:    map[string]string{"component": "new-req"},
+		Nick:      "agent-2",
+		Timestamp: time.Now(),
+	})
+
+	timedOut := cs.TimedOutRequests(5 * time.Second)
+	if len(timedOut) != 1 {
+		t.Fatalf("TimedOutRequests = %d, want 1", len(timedOut))
+	}
+	if timedOut[0].Component != "old-req" {
+		t.Errorf("Component = %q, want %q", timedOut[0].Component, "old-req")
+	}
+}
+
+func TestContextStore_Subscribe(t *testing.T) {
+	cs := NewContextStore()
+	var received *ContextEntry
+	var mu sync.Mutex
+
+	cs.Subscribe("auth", func(entry *ContextEntry) {
+		mu.Lock()
+		received = entry
+		mu.Unlock()
+	})
+
+	cs.Store(&protocol.Message{
+		Action:    protocol.ActionContext,
+		Fields:    map[string]string{"component": "auth", "status": "ready"},
+		Nick:      "agent-1",
+		Timestamp: time.Now(),
+	})
+
+	mu.Lock()
+	defer mu.Unlock()
+	if received == nil {
+		t.Fatal("subscription handler not called")
+	}
+	if received.Component != "auth" {
+		t.Errorf("received.Component = %q, want %q", received.Component, "auth")
+	}
+}
+
+func TestContextStore_Subscribe_DifferentComponent(t *testing.T) {
+	cs := NewContextStore()
+	called := false
+	cs.Subscribe("database", func(entry *ContextEntry) {
+		called = true
+	})
+
+	// Store for a different component.
+	cs.Store(&protocol.Message{
+		Action:    protocol.ActionContext,
+		Fields:    map[string]string{"component": "auth", "status": "ok"},
+		Nick:      "agent-1",
+		Timestamp: time.Now(),
+	})
+
+	if called {
+		t.Error("subscription for 'database' should not fire for 'auth' store")
+	}
+}
+
+func TestContextStore_Unsubscribe(t *testing.T) {
+	cs := NewContextStore()
+	callCount := 0
+	id := cs.Subscribe("auth", func(entry *ContextEntry) {
+		callCount++
+	})
+
+	cs.Store(&protocol.Message{
+		Action:    protocol.ActionContext,
+		Fields:    map[string]string{"component": "auth"},
+		Nick:      "agent-1",
+		Timestamp: time.Now(),
+	})
+	if callCount != 1 {
+		t.Fatalf("callCount = %d, want 1", callCount)
+	}
+
+	cs.Unsubscribe(id)
+	cs.Store(&protocol.Message{
+		Action:    protocol.ActionContext,
+		Fields:    map[string]string{"component": "auth"},
+		Nick:      "agent-1",
+		Timestamp: time.Now(),
+	})
+	if callCount != 1 {
+		t.Errorf("callCount = %d, want 1 (should not fire after unsubscribe)", callCount)
+	}
+}
+
+func TestContextStore_PendingRequests_ReturnsCopy(t *testing.T) {
+	cs := NewContextStore()
+	cs.TrackRequest(&protocol.Message{
+		Action:    protocol.ActionRequestContext,
+		Fields:    map[string]string{"component": "auth"},
+		Nick:      "agent-1",
+		Timestamp: time.Now(),
+	})
+
+	pending := cs.PendingRequests()
+	pending[0].Fulfilled = true
+
+	// Original should be unchanged.
+	pending2 := cs.PendingRequests()
+	if len(pending2) != 1 {
+		t.Errorf("PendingRequests after mutation = %d, want 1 (should return copies)", len(pending2))
 	}
 }

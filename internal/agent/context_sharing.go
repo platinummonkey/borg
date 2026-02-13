@@ -19,37 +19,66 @@ type ContextEntry struct {
 	UpdatedAt time.Time
 }
 
+// ContextRequest tracks an incoming REQUEST-CONTEXT message.
+type ContextRequest struct {
+	Component   string
+	RequestedBy string
+	Channel     string
+	RequestedAt time.Time
+	Fulfilled   bool
+	FulfilledAt time.Time
+}
+
+// contextSubscription holds a subscription callback for context updates.
+type contextSubscription struct {
+	component string
+	handler   func(*ContextEntry)
+}
+
 // ContextStore tracks context announcements and payloads.
 // It is thread-safe and keyed by component name.
 type ContextStore struct {
 	mu      sync.RWMutex
 	entries map[string]*ContextEntry
+
+	reqMu    sync.Mutex
+	requests []*ContextRequest
+
+	subMu         sync.RWMutex
+	subscriptions map[int]*contextSubscription
+	nextSubID     int
 }
 
 // NewContextStore creates an empty ContextStore.
 func NewContextStore() *ContextStore {
 	return &ContextStore{
-		entries: make(map[string]*ContextEntry),
+		entries:       make(map[string]*ContextEntry),
+		subscriptions: make(map[int]*contextSubscription),
 	}
 }
 
 // Store records a CONTEXT announcement message.
+// It also fulfills pending requests for the component and fires subscription callbacks.
 func (cs *ContextStore) Store(msg *protocol.Message) {
 	component := msg.Get("component")
 	if component == "" {
 		return
 	}
 
-	cs.mu.Lock()
-	defer cs.mu.Unlock()
-
-	cs.entries[component] = &ContextEntry{
+	entry := &ContextEntry{
 		Component: component,
 		Project:   msg.Get("project"),
 		Status:    msg.Get("status"),
 		SharedBy:  msg.Nick,
 		UpdatedAt: msg.Timestamp,
 	}
+
+	cs.mu.Lock()
+	cs.entries[component] = entry
+	cs.mu.Unlock()
+
+	cs.FulfillRequest(component)
+	cs.fireSubscriptions(component, entry)
 }
 
 // StorePayload records a SHARING-CONTEXT payload, associating it with the
@@ -92,6 +121,102 @@ func (cs *ContextStore) Get(component string) *ContextEntry {
 	}
 	cp := *entry
 	return &cp
+}
+
+// TrackRequest records an incoming REQUEST-CONTEXT message.
+func (cs *ContextStore) TrackRequest(msg *protocol.Message) {
+	component := msg.Get("component")
+	if component == "" {
+		return
+	}
+	cs.reqMu.Lock()
+	defer cs.reqMu.Unlock()
+	cs.requests = append(cs.requests, &ContextRequest{
+		Component:   component,
+		RequestedBy: msg.Nick,
+		Channel:     msg.Channel,
+		RequestedAt: msg.Timestamp,
+	})
+}
+
+// FulfillRequest marks all pending requests for the given component as fulfilled.
+func (cs *ContextStore) FulfillRequest(component string) {
+	now := time.Now()
+	cs.reqMu.Lock()
+	defer cs.reqMu.Unlock()
+	for _, r := range cs.requests {
+		if r.Component == component && !r.Fulfilled {
+			r.Fulfilled = true
+			r.FulfilledAt = now
+		}
+	}
+}
+
+// PendingRequests returns all unfulfilled context requests.
+func (cs *ContextStore) PendingRequests() []*ContextRequest {
+	cs.reqMu.Lock()
+	defer cs.reqMu.Unlock()
+	var result []*ContextRequest
+	for _, r := range cs.requests {
+		if !r.Fulfilled {
+			cp := *r
+			result = append(result, &cp)
+		}
+	}
+	return result
+}
+
+// TimedOutRequests returns unfulfilled requests older than the given timeout.
+func (cs *ContextStore) TimedOutRequests(timeout time.Duration) []*ContextRequest {
+	cutoff := time.Now().Add(-timeout)
+	cs.reqMu.Lock()
+	defer cs.reqMu.Unlock()
+	var result []*ContextRequest
+	for _, r := range cs.requests {
+		if !r.Fulfilled && r.RequestedAt.Before(cutoff) {
+			cp := *r
+			result = append(result, &cp)
+		}
+	}
+	return result
+}
+
+// Subscribe registers a callback that fires when context for the given component is stored.
+// Returns a subscription ID for later removal.
+func (cs *ContextStore) Subscribe(component string, handler func(*ContextEntry)) int {
+	cs.subMu.Lock()
+	defer cs.subMu.Unlock()
+	id := cs.nextSubID
+	cs.nextSubID++
+	cs.subscriptions[id] = &contextSubscription{
+		component: component,
+		handler:   handler,
+	}
+	return id
+}
+
+// Unsubscribe removes a previously registered subscription.
+func (cs *ContextStore) Unsubscribe(id int) {
+	cs.subMu.Lock()
+	defer cs.subMu.Unlock()
+	delete(cs.subscriptions, id)
+}
+
+// fireSubscriptions calls all subscription handlers matching the component.
+func (cs *ContextStore) fireSubscriptions(component string, entry *ContextEntry) {
+	cs.subMu.RLock()
+	var handlers []func(*ContextEntry)
+	for _, sub := range cs.subscriptions {
+		if sub.component == component {
+			handlers = append(handlers, sub.handler)
+		}
+	}
+	cs.subMu.RUnlock()
+
+	cp := *entry
+	for _, h := range handlers {
+		h(&cp)
+	}
 }
 
 // HandleContextRequest responds to a REQUEST-CONTEXT message by sending

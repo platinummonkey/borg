@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -158,6 +159,90 @@ func TestMultiAgentProtocol(t *testing.T) {
 	// (the BLOCKED was sent by agent2 itself, so it doesn't count)
 	if totalReceived < 3 {
 		t.Errorf("agent2 received %d protocol messages, want >= 3", totalReceived)
+	}
+}
+
+// TestUnblockNotification tests that when agent1 completes a task that agent2 is
+// blocked on, agent2 receives an automatic ACKNOWLEDGED message with #auto-unblock.
+func TestUnblockNotification(t *testing.T) {
+	srv, err := mock.NewIRCServer()
+	if err != nil {
+		t.Fatalf("failed to start mock server: %v", err)
+	}
+	defer srv.Close()
+
+	srv.Accounts["agent1"] = "pass1"
+	srv.Accounts["agent2"] = "pass2"
+
+	agent1 := createTestAgent(t, srv, "agent-alice-1", "agent1", "pass1")
+	agent2 := createTestAgent(t, srv, "agent-bob-2", "agent2", "pass2")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	if err := agent1.Start(ctx); err != nil {
+		t.Fatalf("agent1 Connect failed: %v", err)
+	}
+	defer agent1.Shutdown()
+
+	if err := agent2.Start(ctx); err != nil {
+		t.Fatalf("agent2 Connect failed: %v", err)
+	}
+	defer agent2.Shutdown()
+
+	agent1.client.Join("#project")
+	agent2.client.Join("#project")
+	time.Sleep(200 * time.Millisecond)
+
+	// Track raw messages received by both agents (to see ACKNOWLEDGED).
+	var agent1Raw []string
+	var agent2Raw []string
+	var mu sync.Mutex
+
+	agent1.client.OnMessage(func(ev ircclient.MessageEvent) {
+		mu.Lock()
+		agent1Raw = append(agent1Raw, ev.Message)
+		mu.Unlock()
+	})
+	agent2.client.OnMessage(func(ev ircclient.MessageEvent) {
+		mu.Lock()
+		agent2Raw = append(agent2Raw, ev.Message)
+		mu.Unlock()
+	})
+
+	// Agent2 announces being blocked on "db-migration".
+	if err := agent2.AnnounceBlocked("#project", "integration-tests", "db-migration", "blocked-by-db-migration"); err != nil {
+		t.Fatalf("AnnounceBlocked failed: %v", err)
+	}
+	time.Sleep(300 * time.Millisecond)
+
+	// Agent1 completes db-migration — should trigger auto-unblock notification.
+	if err := agent1.AnnounceCompleted("#project", "db-migration", "unblocks-others"); err != nil {
+		t.Fatalf("AnnounceCompleted failed: %v", err)
+	}
+	time.Sleep(500 * time.Millisecond)
+
+	// Check that an ACKNOWLEDGED message with #auto-unblock was sent to the channel.
+	mu.Lock()
+	defer mu.Unlock()
+
+	foundAutoUnblock := false
+	for _, raw := range agent2Raw {
+		if strings.Contains(raw, "ACKNOWLEDGED") && strings.Contains(raw, "#auto-unblock") && strings.Contains(raw, "integration-tests") {
+			foundAutoUnblock = true
+			break
+		}
+	}
+	// Also check agent1's raw messages (it receives the broadcast too).
+	for _, raw := range agent1Raw {
+		if strings.Contains(raw, "ACKNOWLEDGED") && strings.Contains(raw, "#auto-unblock") && strings.Contains(raw, "integration-tests") {
+			foundAutoUnblock = true
+			break
+		}
+	}
+
+	if !foundAutoUnblock {
+		t.Errorf("auto-unblock ACKNOWLEDGED not found in messages.\nagent1Raw: %v\nagent2Raw: %v", agent1Raw, agent2Raw)
 	}
 }
 

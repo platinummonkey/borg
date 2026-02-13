@@ -233,6 +233,174 @@ func TestStateStore_AgentStatus(t *testing.T) {
 	}
 }
 
+func TestStateStore_BlockersOf(t *testing.T) {
+	s := NewStateStore()
+	s.AddDependency(DependencyEdge{Blocked: "task-c", BlockedBy: "task-a"})
+	s.AddDependency(DependencyEdge{Blocked: "task-c", BlockedBy: "task-b"})
+
+	blockers := s.BlockersOf("task-c", false)
+	if len(blockers) != 2 {
+		t.Fatalf("BlockersOf(task-c) = %d, want 2", len(blockers))
+	}
+
+	// Resolve one.
+	s.UpdateTask(&protocol.Message{
+		Action: protocol.ActionCompleted, Fields: map[string]string{"task": "task-a"}, Timestamp: time.Now(),
+	})
+	unresolved := s.BlockersOf("task-c", false)
+	if len(unresolved) != 1 {
+		t.Errorf("BlockersOf(task-c, unresolved) = %d, want 1", len(unresolved))
+	}
+	all := s.BlockersOf("task-c", true)
+	if len(all) != 2 {
+		t.Errorf("BlockersOf(task-c, all) = %d, want 2", len(all))
+	}
+}
+
+func TestStateStore_BlockedBy(t *testing.T) {
+	s := NewStateStore()
+	s.AddDependency(DependencyEdge{Blocked: "task-b", BlockedBy: "task-a"})
+	s.AddDependency(DependencyEdge{Blocked: "task-c", BlockedBy: "task-a"})
+
+	blocking := s.BlockedBy("task-a", false)
+	if len(blocking) != 2 {
+		t.Fatalf("BlockedBy(task-a) = %d, want 2", len(blocking))
+	}
+}
+
+func TestStateStore_HasCycle_Direct(t *testing.T) {
+	s := NewStateStore()
+	// A→B already exists, B→A would create a cycle.
+	s.AddDependency(DependencyEdge{Blocked: "a", BlockedBy: "b"})
+
+	if !s.HasCycle("b", "a") {
+		t.Error("HasCycle(b, a) = false, want true")
+	}
+	// Non-cyclic should pass.
+	if s.HasCycle("c", "a") {
+		t.Error("HasCycle(c, a) = true, want false")
+	}
+}
+
+func TestStateStore_HasCycle_Transitive(t *testing.T) {
+	s := NewStateStore()
+	// Chain: a→b→c. Adding c→a would cycle.
+	s.AddDependency(DependencyEdge{Blocked: "a", BlockedBy: "b"})
+	s.AddDependency(DependencyEdge{Blocked: "b", BlockedBy: "c"})
+
+	if !s.HasCycle("c", "a") {
+		t.Error("HasCycle(c, a) = false, want true (transitive)")
+	}
+}
+
+func TestStateStore_HasCycle_SelfLoop(t *testing.T) {
+	s := NewStateStore()
+	if !s.HasCycle("x", "x") {
+		t.Error("HasCycle(x, x) = false, want true (self-loop)")
+	}
+}
+
+func TestStateStore_AddDependency_RejectsCycle(t *testing.T) {
+	s := NewStateStore()
+	s.AddDependency(DependencyEdge{Blocked: "a", BlockedBy: "b"})
+	// Attempt to add b→a (cycle).
+	s.AddDependency(DependencyEdge{Blocked: "b", BlockedBy: "a"})
+
+	all := s.AllDependencies()
+	if len(all) != 1 {
+		t.Errorf("AllDependencies = %d, want 1 (cycle should be rejected)", len(all))
+	}
+}
+
+func TestStateStore_AllDependencies(t *testing.T) {
+	s := NewStateStore()
+	s.AddDependency(DependencyEdge{Blocked: "x", BlockedBy: "y"})
+	s.AddDependency(DependencyEdge{Blocked: "y", BlockedBy: "z"})
+
+	all := s.AllDependencies()
+	if len(all) != 2 {
+		t.Errorf("AllDependencies = %d, want 2", len(all))
+	}
+}
+
+func TestStateStore_DependencyStats(t *testing.T) {
+	s := NewStateStore()
+	// Create: task-b blocked by task-a, task-c blocked by task-a.
+	s.UpdateTask(&protocol.Message{
+		Action: protocol.ActionBlocked, Fields: map[string]string{"task": "task-b", "waiting-for": "task-a"}, Timestamp: time.Now(),
+	})
+	s.UpdateTask(&protocol.Message{
+		Action: protocol.ActionBlocked, Fields: map[string]string{"task": "task-c", "waiting-for": "task-a"}, Timestamp: time.Now(),
+	})
+
+	stats := s.DependencyStats()
+	if stats.TotalEdges != 2 {
+		t.Errorf("TotalEdges = %d, want 2", stats.TotalEdges)
+	}
+	if stats.UnresolvedEdges != 2 {
+		t.Errorf("UnresolvedEdges = %d, want 2", stats.UnresolvedEdges)
+	}
+	if stats.BlockedTasks != 2 {
+		t.Errorf("BlockedTasks = %d, want 2", stats.BlockedTasks)
+	}
+
+	// Complete task-a.
+	s.UpdateTask(&protocol.Message{
+		Action: protocol.ActionCompleted, Fields: map[string]string{"task": "task-a"}, Timestamp: time.Now(),
+	})
+
+	stats = s.DependencyStats()
+	if stats.ResolvedEdges != 2 {
+		t.Errorf("ResolvedEdges = %d, want 2", stats.ResolvedEdges)
+	}
+	if stats.UnblockedTasks != 2 {
+		t.Errorf("UnblockedTasks = %d, want 2", stats.UnblockedTasks)
+	}
+}
+
+func TestStateStore_TransitiveDependencies(t *testing.T) {
+	s := NewStateStore()
+	// Chain: a→b→c→d
+	s.AddDependency(DependencyEdge{Blocked: "a", BlockedBy: "b"})
+	s.AddDependency(DependencyEdge{Blocked: "b", BlockedBy: "c"})
+	s.AddDependency(DependencyEdge{Blocked: "c", BlockedBy: "d"})
+
+	deps := s.TransitiveDependencies("a")
+	if len(deps) != 3 {
+		t.Fatalf("TransitiveDependencies(a) = %v, want 3 items", deps)
+	}
+
+	// Verify all expected deps are present.
+	found := make(map[string]bool)
+	for _, d := range deps {
+		found[d] = true
+	}
+	for _, want := range []string{"b", "c", "d"} {
+		if !found[want] {
+			t.Errorf("TransitiveDependencies(a) missing %q", want)
+		}
+	}
+}
+
+func TestStateStore_TransitiveDependencies_SkipsResolved(t *testing.T) {
+	s := NewStateStore()
+	// a→b→c, but resolve b→c.
+	s.AddDependency(DependencyEdge{Blocked: "a", BlockedBy: "b"})
+	s.AddDependency(DependencyEdge{Blocked: "b", BlockedBy: "c"})
+	s.UpdateTask(&protocol.Message{
+		Action: protocol.ActionCompleted, Fields: map[string]string{"task": "c"}, Timestamp: time.Now(),
+	})
+
+	deps := s.TransitiveDependencies("a")
+	// b is still unresolved blocker of a, but c's edge to b is resolved.
+	if len(deps) != 1 {
+		t.Fatalf("TransitiveDependencies(a) = %v, want [b]", deps)
+	}
+	if deps[0] != "b" {
+		t.Errorf("TransitiveDependencies(a) = %v, want [b]", deps)
+	}
+}
+
 func TestStateStore_GetTask_ReturnsCopy(t *testing.T) {
 	s := NewStateStore()
 	s.UpdateTask(&protocol.Message{

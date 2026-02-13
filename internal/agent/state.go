@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"log/slog"
 	"strings"
 	"sync"
 	"time"
@@ -34,6 +35,15 @@ type DependencyEdge struct {
 	BlockedBy  string // task name that is blocking
 	Resolved   bool
 	ResolvedAt time.Time
+}
+
+// DependencyStatsInfo holds aggregate statistics about the dependency graph.
+type DependencyStatsInfo struct {
+	TotalEdges      int
+	ResolvedEdges   int
+	UnresolvedEdges int
+	BlockedTasks    int
+	UnblockedTasks  int
 }
 
 // AgentStatus tracks what an agent is currently doing.
@@ -127,14 +137,49 @@ func (s *StateStore) resolveDependenciesLocked(taskName string) {
 }
 
 // addDependencyLocked adds a dependency edge if it doesn't already exist.
+// Returns false if the edge would create a cycle or already exists.
 // Must be called with s.mu held.
-func (s *StateStore) addDependencyLocked(edge DependencyEdge) {
+func (s *StateStore) addDependencyLocked(edge DependencyEdge) bool {
 	for _, e := range s.dependencies {
 		if e.Blocked == edge.Blocked && e.BlockedBy == edge.BlockedBy {
-			return
+			return false
 		}
 	}
+	if s.hasCycleLocked(edge.Blocked, edge.BlockedBy) {
+		slog.Warn("dependency rejected: would create cycle",
+			"blocked", edge.Blocked, "blocked_by", edge.BlockedBy)
+		return false
+	}
 	s.dependencies = append(s.dependencies, edge)
+	return true
+}
+
+// hasCycleLocked checks whether adding an edge blocked→blockedBy would create
+// a cycle. It does a DFS from blockedBy following unresolved edges to see if
+// blocked is reachable. Must be called with s.mu held.
+func (s *StateStore) hasCycleLocked(blocked, blockedBy string) bool {
+	if blocked == blockedBy {
+		return true
+	}
+	visited := make(map[string]bool)
+	stack := []string{blockedBy}
+	for len(stack) > 0 {
+		node := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+		if visited[node] {
+			continue
+		}
+		visited[node] = true
+		for _, e := range s.dependencies {
+			if e.Blocked == node && !e.Resolved {
+				if e.BlockedBy == blocked {
+					return true
+				}
+				stack = append(stack, e.BlockedBy)
+			}
+		}
+	}
+	return false
 }
 
 // GetTask returns the tracked info for a task, or nil if unknown.
@@ -252,4 +297,110 @@ func (s *StateStore) GetAgentStatus(nick string) *AgentStatus {
 	}
 	cp := *status
 	return &cp
+}
+
+// BlockersOf returns the dependency edges where taskName is the blocked task.
+// If includeResolved is false, only unresolved edges are returned.
+func (s *StateStore) BlockersOf(taskName string, includeResolved bool) []DependencyEdge {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	var result []DependencyEdge
+	for _, e := range s.dependencies {
+		if e.Blocked == taskName && (includeResolved || !e.Resolved) {
+			result = append(result, e)
+		}
+	}
+	return result
+}
+
+// BlockedBy returns the dependency edges where taskName is the blocker.
+// If includeResolved is false, only unresolved edges are returned.
+func (s *StateStore) BlockedBy(taskName string, includeResolved bool) []DependencyEdge {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	var result []DependencyEdge
+	for _, e := range s.dependencies {
+		if e.BlockedBy == taskName && (includeResolved || !e.Resolved) {
+			result = append(result, e)
+		}
+	}
+	return result
+}
+
+// HasCycle returns true if adding an edge blocked→blockedBy would create a cycle.
+func (s *StateStore) HasCycle(blocked, blockedBy string) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.hasCycleLocked(blocked, blockedBy)
+}
+
+// AllDependencies returns a copy of all dependency edges.
+func (s *StateStore) AllDependencies() []DependencyEdge {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	result := make([]DependencyEdge, len(s.dependencies))
+	copy(result, s.dependencies)
+	return result
+}
+
+// DependencyStats returns aggregate statistics about the dependency graph.
+func (s *StateStore) DependencyStats() DependencyStatsInfo {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	stats := DependencyStatsInfo{TotalEdges: len(s.dependencies)}
+	for _, e := range s.dependencies {
+		if e.Resolved {
+			stats.ResolvedEdges++
+		} else {
+			stats.UnresolvedEdges++
+		}
+	}
+
+	for _, info := range s.tasks {
+		if info.Status != TaskStatusBlocked {
+			continue
+		}
+		allResolved := true
+		hasDeps := false
+		for _, e := range s.dependencies {
+			if e.Blocked == info.Name {
+				hasDeps = true
+				if !e.Resolved {
+					allResolved = false
+					break
+				}
+			}
+		}
+		if hasDeps && allResolved {
+			stats.UnblockedTasks++
+		} else if hasDeps {
+			stats.BlockedTasks++
+		}
+	}
+	return stats
+}
+
+// TransitiveDependencies returns all tasks that taskName transitively depends on
+// (i.e., all transitive blockers). Uses BFS over unresolved edges.
+func (s *StateStore) TransitiveDependencies(taskName string) []string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	visited := make(map[string]bool)
+	queue := []string{taskName}
+	var result []string
+
+	for len(queue) > 0 {
+		node := queue[0]
+		queue = queue[1:]
+		for _, e := range s.dependencies {
+			if e.Blocked == node && !e.Resolved && !visited[e.BlockedBy] {
+				visited[e.BlockedBy] = true
+				result = append(result, e.BlockedBy)
+				queue = append(queue, e.BlockedBy)
+			}
+		}
+	}
+	return result
 }

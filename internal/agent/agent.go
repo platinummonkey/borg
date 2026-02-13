@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/platinummonkey/agent-chat/internal/config"
 	"github.com/platinummonkey/agent-chat/internal/logging"
@@ -19,6 +20,7 @@ type Agent struct {
 	state    *StateStore
 	context  *ContextStore
 	protocol *ProtocolDispatcher
+	notifier *Notifier
 }
 
 // New creates an Agent from an AppConfig.
@@ -54,12 +56,14 @@ func NewWithClient(cfg *config.AppConfig, client ircclient.Client) *Agent {
 	return a
 }
 
-// initProtocol sets up the state store, context store, and protocol dispatcher.
+// initProtocol sets up the state store, context store, protocol dispatcher, and notifier.
 func (a *Agent) initProtocol() {
 	a.state = NewStateStore()
 	a.context = NewContextStore()
 	a.protocol = NewProtocolDispatcher(a.client, a.state, a.context)
 	a.protocol.Register()
+	a.notifier = NewNotifier(a.client)
+	a.protocol.OnProtocolMessage(a.notifier.HandleMessage)
 }
 
 // Start connects the agent to the IRC server.
@@ -100,11 +104,21 @@ func (a *Agent) OnProtocolMessage(handler ProtocolHandler) int {
 }
 
 // SendProtocolMessage sends a protocol message to a target channel or user.
-// The message is sanitized before sending.
+// The message is sanitized before sending. It also updates the local state
+// store so the agent tracks its own actions (the dispatcher skips self-echo).
 func (a *Agent) SendProtocolMessage(target string, msg *protocol.Message) error {
 	if err := protocol.Sanitize(msg); err != nil {
 		return err
 	}
+	// Update local state before sending — the dispatcher will skip the echo.
+	localMsg := *msg
+	localMsg.Channel = target
+	localMsg.Nick = a.client.Nick()
+	if localMsg.Timestamp.IsZero() {
+		localMsg.Timestamp = time.Now()
+	}
+	a.protocol.updateLocalState(&localMsg)
+
 	a.client.SendMessage(target, msg.String())
 	return nil
 }
@@ -180,6 +194,46 @@ func (a *Agent) RequestContext(channel, component string) error {
 		Fields: map[string]string{"component": component},
 	}
 	return a.SendProtocolMessage(channel, msg)
+}
+
+// SubscribeContext registers a callback for context updates on a component.
+func (a *Agent) SubscribeContext(component string, handler func(*ContextEntry)) int {
+	return a.context.Subscribe(component, handler)
+}
+
+// UnsubscribeContext removes a context subscription.
+func (a *Agent) UnsubscribeContext(id int) {
+	a.context.Unsubscribe(id)
+}
+
+// PendingContextRequests returns all unfulfilled context requests.
+func (a *Agent) PendingContextRequests() []*ContextRequest {
+	return a.context.PendingRequests()
+}
+
+// AddNotificationRule adds a rule for routing protocol events to notification channels.
+func (a *Agent) AddNotificationRule(rule NotificationRule) {
+	a.notifier.AddRule(rule)
+}
+
+// NotifyCompletionsTo adds a rule to send task completion notifications to a channel.
+func (a *Agent) NotifyCompletionsTo(channel string) {
+	a.notifier.AddRule(NotificationRule{Event: NotifyTaskCompleted, Channel: channel})
+}
+
+// NotifyBlockedTo adds a rule to send task blocked notifications to a channel.
+func (a *Agent) NotifyBlockedTo(channel string) {
+	a.notifier.AddRule(NotificationRule{Event: NotifyTaskBlocked, Channel: channel})
+}
+
+// NotifyHelpTo adds a rule to send help-needed notifications to a channel.
+func (a *Agent) NotifyHelpTo(channel string) {
+	a.notifier.AddRule(NotificationRule{Event: NotifyHelpNeeded, Channel: channel})
+}
+
+// AgentNotifier returns the agent's notifier for direct configuration.
+func (a *Agent) AgentNotifier() *Notifier {
+	return a.notifier
 }
 
 // registerHandlers sets up default event handlers for logging.
