@@ -12,13 +12,14 @@ import (
 // Dashboard provides an HTTP server with JSON APIs and an HTML dashboard
 // for monitoring agent health, metrics, tasks, and messages.
 type Dashboard struct {
-	health    *HealthMonitor
-	metrics   *MetricsCollector
-	inspector *DebugInspector
-	state     *StateStore
-	context   *ContextStore
-	server    *http.Server
-	addr      string
+	health     *HealthMonitor
+	metrics    *MetricsCollector
+	inspector  *DebugInspector
+	state      *StateStore
+	context    *ContextStore
+	server     *http.Server
+	addr       string
+	listenAddr string
 }
 
 // NewDashboard creates a Dashboard wired to the given components.
@@ -63,6 +64,7 @@ func (d *Dashboard) Start() error {
 	if err != nil {
 		return err
 	}
+	d.listenAddr = ln.Addr().String()
 
 	go func() {
 		slog.Info("dashboard started", "addr", ln.Addr().String())
@@ -72,6 +74,9 @@ func (d *Dashboard) Start() error {
 	}()
 	return nil
 }
+
+// ListenAddr returns the address the dashboard is actually listening on.
+func (d *Dashboard) ListenAddr() string { return d.listenAddr }
 
 // Shutdown gracefully shuts down the dashboard HTTP server.
 func (d *Dashboard) Shutdown(ctx context.Context) error {

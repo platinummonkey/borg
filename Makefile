@@ -1,4 +1,4 @@
-.PHONY: build build-agent build-provision provision test test-integration fmt vet lint run clean
+.PHONY: build build-agent build-provision provision test test-integration fmt vet lint run run-example clean
 
 # Build variables
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
@@ -41,6 +41,9 @@ vet:
 	go vet ./...
 
 lint: fmt vet
+
+run-example:
+	go run ./examples/multi-agent/
 
 clean:
 	rm -rf $(GOBIN) coverage.out
