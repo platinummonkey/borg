@@ -20,6 +20,7 @@ import (
 
 // IRCServer is a minimal mock IRC server for unit testing.
 // It supports TLS, SASL PLAIN authentication, and basic IRC commands.
+// PRIVMSG messages are broadcast to all clients in the same channel.
 type IRCServer struct {
 	listener  net.Listener
 	addr      string
@@ -28,6 +29,9 @@ type IRCServer struct {
 	mu      sync.Mutex
 	clients []*mockClient
 	closed  bool
+
+	// channels tracks channel membership: channel name -> set of mockClient pointers.
+	channels map[string]map[*mockClient]struct{}
 
 	// Accounts maps username to password for SASL auth.
 	Accounts map[string]string
@@ -40,6 +44,9 @@ type mockClient struct {
 	server   *IRCServer
 	welcomed bool
 	scanner  *bufio.Scanner
+
+	mu       sync.Mutex
+	joinedCh map[string]struct{}
 }
 
 // NewIRCServer creates and starts a mock IRC server with a self-signed TLS cert.
@@ -58,6 +65,7 @@ func NewIRCServer() (*IRCServer, error) {
 		listener:  listener,
 		addr:      listener.Addr().String(),
 		tlsConfig: tlsCfg,
+		channels:  make(map[string]map[*mockClient]struct{}),
 		Accounts:  map[string]string{"testuser": "testpass"},
 	}
 
@@ -98,9 +106,10 @@ func (s *IRCServer) acceptLoop() {
 		}
 
 		mc := &mockClient{
-			conn:    conn,
-			server:  s,
-			scanner: bufio.NewScanner(conn),
+			conn:     conn,
+			server:   s,
+			scanner:  bufio.NewScanner(conn),
+			joinedCh: make(map[string]struct{}),
 		}
 
 		s.mu.Lock()
@@ -111,8 +120,63 @@ func (s *IRCServer) acceptLoop() {
 	}
 }
 
+// joinChannel adds a client to a channel's membership list.
+func (s *IRCServer) joinChannel(channel string, mc *mockClient) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.channels[channel] == nil {
+		s.channels[channel] = make(map[*mockClient]struct{})
+	}
+	s.channels[channel][mc] = struct{}{}
+}
+
+// partChannel removes a client from a channel's membership list.
+func (s *IRCServer) partChannel(channel string, mc *mockClient) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if members, ok := s.channels[channel]; ok {
+		delete(members, mc)
+		if len(members) == 0 {
+			delete(s.channels, channel)
+		}
+	}
+}
+
+// removeClient removes a client from all channels.
+func (s *IRCServer) removeClient(mc *mockClient) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for ch, members := range s.channels {
+		delete(members, mc)
+		if len(members) == 0 {
+			delete(s.channels, ch)
+		}
+	}
+}
+
+// broadcastToChannel sends a message to all clients in a channel except the sender.
+func (s *IRCServer) broadcastToChannel(channel, msg string, sender *mockClient) {
+	s.mu.Lock()
+	members := make([]*mockClient, 0)
+	if ch, ok := s.channels[channel]; ok {
+		for mc := range ch {
+			if mc != sender {
+				members = append(members, mc)
+			}
+		}
+	}
+	s.mu.Unlock()
+
+	for _, mc := range members {
+		mc.send(msg)
+	}
+}
+
 func (mc *mockClient) handleConnection() {
-	defer mc.conn.Close()
+	defer func() {
+		mc.server.removeClient(mc)
+		mc.conn.Close()
+	}()
 
 	saslAuthenticated := false
 	capNegotiating := false
@@ -177,7 +241,15 @@ func (mc *mockClient) handleConnection() {
 		case "JOIN":
 			if len(parts) >= 2 {
 				channel := parts[1]
-				mc.send(fmt.Sprintf(":%s!%s@localhost JOIN %s", mc.nick, mc.user, channel))
+				mc.server.joinChannel(channel, mc)
+				mc.mu.Lock()
+				mc.joinedCh[channel] = struct{}{}
+				mc.mu.Unlock()
+
+				joinMsg := fmt.Sprintf(":%s!%s@localhost JOIN %s", mc.nick, mc.user, channel)
+				// Send to joiner and broadcast to channel.
+				mc.send(joinMsg)
+				mc.server.broadcastToChannel(channel, joinMsg, mc)
 				mc.send(fmt.Sprintf(":server 353 %s = %s :%s", mc.nick, channel, mc.nick))
 				mc.send(fmt.Sprintf(":server 366 %s %s :End of /NAMES list", mc.nick, channel))
 			}
@@ -185,7 +257,13 @@ func (mc *mockClient) handleConnection() {
 		case "PART":
 			if len(parts) >= 2 {
 				channel := parts[1]
-				mc.send(fmt.Sprintf(":%s!%s@localhost PART %s", mc.nick, mc.user, channel))
+				partMsg := fmt.Sprintf(":%s!%s@localhost PART %s", mc.nick, mc.user, channel)
+				mc.send(partMsg)
+				mc.server.broadcastToChannel(channel, partMsg, mc)
+				mc.server.partChannel(channel, mc)
+				mc.mu.Lock()
+				delete(mc.joinedCh, channel)
+				mc.mu.Unlock()
 			}
 
 		case "PRIVMSG":
@@ -195,7 +273,16 @@ func (mc *mockClient) handleConnection() {
 				if strings.HasPrefix(msg, ":") {
 					msg = msg[1:]
 				}
-				mc.send(fmt.Sprintf(":%s!%s@localhost PRIVMSG %s :%s", mc.nick, mc.user, target, msg))
+				fullMsg := fmt.Sprintf(":%s!%s@localhost PRIVMSG %s :%s", mc.nick, mc.user, target, msg)
+
+				if strings.HasPrefix(target, "#") {
+					// Channel message: echo to sender and broadcast to other members.
+					mc.send(fullMsg)
+					mc.server.broadcastToChannel(target, fullMsg, mc)
+				} else {
+					// Private message: send to the target nick.
+					mc.server.sendToNick(target, fullMsg)
+				}
 			}
 
 		case "PING":
@@ -207,6 +294,18 @@ func (mc *mockClient) handleConnection() {
 
 		case "QUIT":
 			mc.send(fmt.Sprintf("ERROR :Closing link: %s", mc.nick))
+			return
+		}
+	}
+}
+
+// sendToNick sends a message to a specific nick (for private messages).
+func (s *IRCServer) sendToNick(nick, msg string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, c := range s.clients {
+		if c.nick == nick {
+			c.send(msg)
 			return
 		}
 	}
