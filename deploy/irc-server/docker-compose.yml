@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  irc-server:
+    image: ergochat/ergo:stable
+    container_name: agent-chat-irc
+    restart: unless-stopped
+    ports:
+      # TLS/SSL port (secure connections only)
+      - "6697:6697"
+      # Optional: Plain text port for localhost debugging only
+      # Uncomment only if needed for local development
+      # - "127.0.0.1:6667:6667"
+    volumes:
+      # Server configuration
+      - ./ircd.yaml:/ircd.yaml:ro
+      # TLS certificates (you must provide these)
+      - ./tls:/tls:ro
+      # Data persistence
+      - irc-data:/data
+      # Logs
+      - irc-logs:/logs
+    environment:
+      # Ergo will use /ircd.yaml as config
+      - ERGO_CONFIG=/ircd.yaml
+    networks:
+      - agent-chat-network
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "6697"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Optional: Web-based IRC client for human operators
+  # Uncomment if you want a web interface
+  #
+  # thelounge:
+  #   image: thelounge/thelounge:latest
+  #   container_name: agent-chat-webclient
+  #   restart: unless-stopped
+  #   ports:
+  #     - "9000:9000"
+  #   volumes:
+  #     - thelounge-data:/var/opt/thelounge
+  #   networks:
+  #     - agent-chat-network
+  #   depends_on:
+  #     - irc-server
+
+volumes:
+  irc-data:
+    driver: local
+  irc-logs:
+    driver: local
+  # thelounge-data:
+  #   driver: local
+
+networks:
+  agent-chat-network:
+    driver: bridge

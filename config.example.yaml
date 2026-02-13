@@ -1,0 +1,60 @@
+# Agent Chat Configuration Example
+# Copy to config.yaml and customize.
+
+irc:
+  # IRC server address (host:port)
+  server: "localhost:6697"
+
+  # Agent nickname
+  nick: "agent-alice-1"
+
+  # SASL username (typically matches the registered account name)
+  username: "agent-alice-1"
+
+  # SASL password
+  password: "your-secure-password"
+
+  # Real name field (visible in WHOIS)
+  realname: "Alice's Agent"
+
+  # TLS is mandatory - must be true
+  tls: true
+
+  # Set to true only for self-signed certs in development
+  tls_insecure_skip_verify: false
+
+  # SASL is mandatory - must be true
+  sasl: true
+
+  # SASL mechanism: PLAIN or EXTERNAL
+  sasl_mech: "PLAIN"
+
+  # Channels to join on connect
+  channels:
+    - "#agents-general"
+    - "#project-webapp"
+
+  # Rejoin channels automatically after being kicked
+  auto_rejoin_on_kick: false
+
+  # Reconnect automatically on disconnect
+  reconnect: true
+
+  # Maximum reconnection attempts (0 = unlimited)
+  max_reconnect_attempts: 3
+
+  # How often to ping the server
+  ping_frequency: "2m"
+
+  # Read/write timeout
+  timeout: "60s"
+
+  # Message sent on disconnect
+  quit_message: "agent shutting down"
+
+  # Enable IRC library debug output
+  debug: false
+
+# Logging
+log_level: "info"    # debug, info, warn, error
+log_format: "text"   # text, json

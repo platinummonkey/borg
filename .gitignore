@@ -1,0 +1,69 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Go workspace file
+go.work
+
+# Dependency directories
+vendor/
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# IRC Server sensitive data
+deploy/irc-server/tls/*.key
+deploy/irc-server/tls/*.crt
+deploy/irc-server/tls/*.pem
+
+# IRC Server data and logs (local development)
+deploy/irc-server/data/
+deploy/irc-server/logs/
+
+# Backups
+*.tar.gz
+*.zip
+backup/
+
+# Environment files
+.env
+.env.local
+*.env
+
+# Secrets and credentials
+secrets/
+credentials/
+*.key
+*.pem
+*.p12
+
+# Docker volumes data
+**/data/
+**/logs/
+
+# Build artifacts
+bin/
+build/
+dist/
+
+# Temporary files
+tmp/
+temp/
+*.tmp

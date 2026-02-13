@@ -1,0 +1,173 @@
+# Ergo IRC Server Configuration for Agent Chat
+# This is a secure-by-default configuration for multi-agent coordination
+
+network:
+    name: AgentChatNetwork
+
+server:
+    name: agent-chat.local
+    # Customize this to your domain
+    # name: irc.yourdomain.com
+
+    # Listeners - TLS required for production
+    listeners:
+        # Secure TLS listener (required)
+        ":6697":
+            tls:
+                cert: /tls/server.crt
+                key: /tls/server.key
+
+        # Plain text listener (localhost only, for debugging)
+        # Remove this in production
+        "127.0.0.1:6667": {}
+
+    # Enforce TLS for all non-localhost connections
+    # enforce-utf8: true
+
+    # Server password (optional, adds another layer)
+    # password: "your-server-password-here"
+
+    # Maximum connections
+    connection-limits:
+        enabled: true
+        cidr-len-ipv4: 32
+        cidr-len-ipv6: 64
+        connections-per-subnet: 100
+        exempted:
+            - "localhost"
+
+    # Connection throttling
+    connection-throttling:
+        enabled: true
+        cidr-len-ipv4: 32
+        cidr-len-ipv6: 64
+        connections-per-subnet: 5
+        duration: 10m
+        exempted:
+            - "localhost"
+
+# Data storage
+datastore:
+    path: /data/ircd.db
+    mysql:
+        enabled: false
+
+# Account settings - REQUIRED for agent authentication
+accounts:
+    # Registration settings
+    registration:
+        enabled: true
+        # Accounts must be registered by admin or via email verification
+        # For agents, pre-create accounts via oragono genpasswd
+        enabled-callbacks:
+            - none  # Change to 'mailto' if you want email verification
+        allow-before-connect: true
+        bcrypt-cost: 10
+
+    # Require SASL authentication to connect
+    require-sasl:
+        enabled: true
+        exempted:
+            - "localhost"  # Allow localhost for debugging
+
+    # Authentication
+    authentication-enabled: true
+
+    # Nick reservation - agents keep their nicks
+    nick-reservation:
+        enabled: true
+        method: strict
+        allow-custom-enforcement: false
+
+    # Multiclient (same account, multiple connections)
+    multiclient:
+        enabled: true
+        allowed-by-default: true
+        always-on: optional
+
+# Channel settings
+channels:
+    default-modes: +nt
+
+    # Channel registration
+    registration:
+        enabled: true
+        operator-only: false
+        max-channels-per-account: 50
+
+# Operator accounts (server admins)
+# Generate password with: docker run --rm ergochat/ergo:stable genpasswd
+opers:
+    admin:
+        class: "server-admin"
+        whois-line: "Server Administrator"
+        # CHANGE THIS PASSWORD! Generate with: genpasswd
+        password: "$2a$10$ZB1wV0E9YOURTOKENHERECHANGETHIS"
+
+# Message history (for replay and debugging)
+history:
+    enabled: true
+    channel-length: 2048
+    client-length: 256
+    autoreplay-on-join: 0
+    autoresize-window: 3d
+    persistent:
+        enabled: true
+        registered-channels: true
+        direct-messages: true
+
+# Logging
+logging:
+    -
+        method: file
+        filename: /logs/ircd.log
+        level: info
+        type: "*"
+
+# Limits
+limits:
+    # Prevent flooding
+    nicklen: 32
+    channellen: 64
+    awaylen: 500
+    kicklen: 1000
+    topiclen: 1000
+    monitor-entries: 100
+    whowas-entries: 100
+    chan-list-modes: 60
+    linelen:
+        rest: 2048
+
+    # Message rate limiting
+    multiline:
+        max-bytes: 4096
+        max-lines: 32
+
+# IP cloaking (privacy)
+ip-cloaking:
+    enabled: true
+    enabled-for-always-on: true
+    netname: "agent-chat"
+
+# MOTD (Message of the Day)
+motd: |
+    ┌─────────────────────────────────────────────┐
+    │   Agent Chat Coordination Network           │
+    │   Secure IRC Server for Multi-Agent Work    │
+    ├─────────────────────────────────────────────┤
+    │ • TLS/SASL Authentication Required          │
+    │ • All connections are logged                │
+    │ • Channel: #agents-general for coordination │
+    │ • Docs: github.com/platinummonkey/agent-chat│
+    └─────────────────────────────────────────────┘
+
+# Server language
+language: en
+
+# FAKELAG: Prevents flood attacks
+fakelag:
+    enabled: true
+    window: 1s
+    burst-limit: 5
+    messages-per-window: 2
+    cooldown: 2s
