@@ -111,6 +111,18 @@ func (cs *ContextStore) StorePayload(msg *protocol.Message) {
 	}
 }
 
+// ListEntries returns all stored context entries.
+func (cs *ContextStore) ListEntries() []*ContextEntry {
+	cs.mu.RLock()
+	defer cs.mu.RUnlock()
+	result := make([]*ContextEntry, 0, len(cs.entries))
+	for _, entry := range cs.entries {
+		cp := *entry
+		result = append(result, &cp)
+	}
+	return result
+}
+
 // Get returns the context entry for a component, or nil if not found.
 func (cs *ContextStore) Get(component string) *ContextEntry {
 	cs.mu.RLock()

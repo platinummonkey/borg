@@ -13,9 +13,10 @@ import (
 
 // AppConfig combines IRC client config with application-level settings.
 type AppConfig struct {
-	IRC      ircclient.Config `yaml:"irc"`
-	LogLevel string           `yaml:"log_level"`
-	LogFmt   string           `yaml:"log_format"`
+	IRC           ircclient.Config `yaml:"irc"`
+	LogLevel      string           `yaml:"log_level"`
+	LogFmt        string           `yaml:"log_format"`
+	DashboardAddr string           `yaml:"dashboard_addr"`
 }
 
 // fileConfig mirrors AppConfig for YAML unmarshaling with duration strings.
@@ -39,8 +40,9 @@ type fileConfig struct {
 		QuitMessage           string   `yaml:"quit_message"`
 		Debug                 bool     `yaml:"debug"`
 	} `yaml:"irc"`
-	LogLevel string `yaml:"log_level"`
-	LogFmt   string `yaml:"log_format"`
+	LogLevel      string `yaml:"log_level"`
+	LogFmt        string `yaml:"log_format"`
+	DashboardAddr string `yaml:"dashboard_addr"`
 }
 
 // Load builds an AppConfig from defaults, config file, environment variables, and CLI flags.
@@ -55,19 +57,20 @@ func Load(args []string) (*AppConfig, error) {
 	// Parse flags (but don't apply yet — we need to know what was explicitly set).
 	fs := flag.NewFlagSet("agent-chat", flag.ContinueOnError)
 	var (
-		flagServer      = fs.String("server", "", "IRC server address (host:port)")
-		flagNick        = fs.String("nick", "", "Agent nickname")
-		flagUsername    = fs.String("username", "", "IRC/SASL username")
-		flagPassword    = fs.String("password", "", "SASL password")
-		flagRealName    = fs.String("realname", "", "IRC real name")
-		flagChannels    = fs.String("channels", "", "Comma-separated channels to join")
-		flagTLS         = fs.Bool("tls", true, "Enable TLS (required)")
-		flagTLSInsecure = fs.Bool("tls-insecure", false, "Skip TLS certificate verification")
-		flagSASL        = fs.Bool("sasl", true, "Enable SASL (required)")
-		flagConfigFile  = fs.String("config", "", "Path to YAML config file")
-		flagLogLevel    = fs.String("log-level", "", "Log level (debug, info, warn, error)")
-		flagLogFmt      = fs.String("log-format", "", "Log format (text, json)")
-		flagDebug       = fs.Bool("debug", false, "Enable IRC debug logging")
+		flagServer        = fs.String("server", "", "IRC server address (host:port)")
+		flagNick          = fs.String("nick", "", "Agent nickname")
+		flagUsername      = fs.String("username", "", "IRC/SASL username")
+		flagPassword      = fs.String("password", "", "SASL password")
+		flagRealName      = fs.String("realname", "", "IRC real name")
+		flagChannels      = fs.String("channels", "", "Comma-separated channels to join")
+		flagTLS           = fs.Bool("tls", true, "Enable TLS (required)")
+		flagTLSInsecure   = fs.Bool("tls-insecure", false, "Skip TLS certificate verification")
+		flagSASL          = fs.Bool("sasl", true, "Enable SASL (required)")
+		flagConfigFile    = fs.String("config", "", "Path to YAML config file")
+		flagLogLevel      = fs.String("log-level", "", "Log level (debug, info, warn, error)")
+		flagLogFmt        = fs.String("log-format", "", "Log format (text, json)")
+		flagDebug         = fs.Bool("debug", false, "Enable IRC debug logging")
+		flagDashboardAddr = fs.String("dashboard-addr", "", "HTTP dashboard listen address (e.g. :8080)")
 	)
 
 	if err := fs.Parse(args); err != nil {
@@ -116,6 +119,8 @@ func Load(args []string) (*AppConfig, error) {
 			cfg.LogFmt = *flagLogFmt
 		case "debug":
 			cfg.IRC.Debug = *flagDebug
+		case "dashboard-addr":
+			cfg.DashboardAddr = *flagDashboardAddr
 		}
 	})
 
@@ -190,6 +195,9 @@ func loadFromFile(cfg *AppConfig, path string) error {
 	if fc.LogFmt != "" {
 		cfg.LogFmt = fc.LogFmt
 	}
+	if fc.DashboardAddr != "" {
+		cfg.DashboardAddr = fc.DashboardAddr
+	}
 
 	return nil
 }
@@ -218,6 +226,9 @@ func applyEnv(cfg *AppConfig) {
 	}
 	if v := os.Getenv("LOG_FORMAT"); v != "" {
 		cfg.LogFmt = v
+	}
+	if v := os.Getenv("DASHBOARD_ADDR"); v != "" {
+		cfg.DashboardAddr = v
 	}
 }
 

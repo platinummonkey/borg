@@ -14,13 +14,17 @@ import (
 
 // Agent orchestrates the IRC client, event handlers, and lifecycle management.
 type Agent struct {
-	cfg      *config.AppConfig
-	client   ircclient.Client
-	lc       *Lifecycle
-	state    *StateStore
-	context  *ContextStore
-	protocol *ProtocolDispatcher
-	notifier *Notifier
+	cfg       *config.AppConfig
+	client    ircclient.Client
+	lc        *Lifecycle
+	state     *StateStore
+	context   *ContextStore
+	protocol  *ProtocolDispatcher
+	notifier  *Notifier
+	health    *HealthMonitor
+	metrics   *MetricsCollector
+	inspector *DebugInspector
+	dashboard *Dashboard
 }
 
 // New creates an Agent from an AppConfig.
@@ -56,7 +60,8 @@ func NewWithClient(cfg *config.AppConfig, client ircclient.Client) *Agent {
 	return a
 }
 
-// initProtocol sets up the state store, context store, protocol dispatcher, and notifier.
+// initProtocol sets up the state store, context store, protocol dispatcher,
+// notifier, health monitor, metrics collector, and debug inspector.
 func (a *Agent) initProtocol() {
 	a.state = NewStateStore()
 	a.context = NewContextStore()
@@ -64,10 +69,33 @@ func (a *Agent) initProtocol() {
 	a.protocol.Register()
 	a.notifier = NewNotifier(a.client)
 	a.protocol.OnProtocolMessage(a.notifier.HandleMessage)
+
+	a.health = NewHealthMonitor(a.client, a.state)
+	a.metrics = NewMetricsCollector()
+	a.inspector = NewDebugInspector(a.state, a.context, 1000)
+
+	// Register metrics and inspector as protocol handlers.
+	a.protocol.OnProtocolMessage(a.metrics.HandleProtocolMessage)
+	a.protocol.OnProtocolMessage(func(msg *protocol.Message) {
+		a.inspector.RecordMessage(MessageLogEntry{
+			Timestamp: msg.Timestamp,
+			Direction: "in",
+			Channel:   msg.Channel,
+			Nick:      msg.Nick,
+			Action:    string(msg.Action),
+			Raw:       msg.String(),
+		})
+	})
 }
 
-// Start connects the agent to the IRC server.
+// Start connects the agent to the IRC server and optionally starts the dashboard.
 func (a *Agent) Start(ctx context.Context) error {
+	if a.cfg.DashboardAddr != "" {
+		a.dashboard = NewDashboard(a.cfg.DashboardAddr, a.health, a.metrics, a.inspector, a.state, a.context)
+		if err := a.dashboard.Start(); err != nil {
+			return fmt.Errorf("start dashboard: %w", err)
+		}
+	}
 	return a.client.Connect(ctx)
 }
 
@@ -79,9 +107,16 @@ func (a *Agent) Run(ctx context.Context) error {
 	return a.lc.Wait(ctx)
 }
 
-// Shutdown performs a graceful shutdown: parts channels, disconnects.
+// Shutdown performs a graceful shutdown: stops dashboard, parts channels, disconnects.
 func (a *Agent) Shutdown() {
 	slog.Info("agent shutting down")
+	if a.dashboard != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := a.dashboard.Shutdown(ctx); err != nil {
+			slog.Error("dashboard shutdown error", "error", err)
+		}
+	}
 	for _, ch := range a.client.JoinedChannels() {
 		a.client.Part(ch)
 	}
@@ -119,7 +154,17 @@ func (a *Agent) SendProtocolMessage(target string, msg *protocol.Message) error 
 	}
 	a.protocol.updateLocalState(&localMsg)
 
-	a.client.SendMessage(target, msg.String())
+	wireMsg := msg.String()
+	a.client.SendMessage(target, wireMsg)
+	a.metrics.RecordMessageSent()
+	a.inspector.RecordMessage(MessageLogEntry{
+		Timestamp: localMsg.Timestamp,
+		Direction: "out",
+		Channel:   target,
+		Nick:      localMsg.Nick,
+		Action:    string(msg.Action),
+		Raw:       wireMsg,
+	})
 	return nil
 }
 
@@ -236,9 +281,26 @@ func (a *Agent) AgentNotifier() *Notifier {
 	return a.notifier
 }
 
-// registerHandlers sets up default event handlers for logging.
+// Health returns the agent's health monitor.
+func (a *Agent) Health() *HealthMonitor {
+	return a.health
+}
+
+// Metrics returns the agent's metrics collector.
+func (a *Agent) Metrics() *MetricsCollector {
+	return a.metrics
+}
+
+// Inspector returns the agent's debug inspector.
+func (a *Agent) Inspector() *DebugInspector {
+	return a.inspector
+}
+
+// registerHandlers sets up default event handlers for logging and metrics.
 func (a *Agent) registerHandlers() {
 	a.client.OnMessage(func(ev ircclient.MessageEvent) {
+		a.metrics.RecordRawMessageReceived()
+
 		kind := "PRIVMSG"
 		if ev.IsNotice {
 			kind = "NOTICE"

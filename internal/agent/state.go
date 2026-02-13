@@ -287,6 +287,18 @@ func (s *StateStore) UpdateAgentStatus(nick, channel, taskName string) {
 	}
 }
 
+// ListAgents returns all tracked agent statuses.
+func (s *StateStore) ListAgents() []*AgentStatus {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	result := make([]*AgentStatus, 0, len(s.agents))
+	for _, status := range s.agents {
+		cp := *status
+		result = append(result, &cp)
+	}
+	return result
+}
+
 // GetAgentStatus returns the current status of an agent, or nil if unknown.
 func (s *StateStore) GetAgentStatus(nick string) *AgentStatus {
 	s.mu.RLock()

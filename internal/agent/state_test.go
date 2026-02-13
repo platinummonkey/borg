@@ -401,6 +401,28 @@ func TestStateStore_TransitiveDependencies_SkipsResolved(t *testing.T) {
 	}
 }
 
+func TestStateStore_ListAgents(t *testing.T) {
+	s := NewStateStore()
+	s.UpdateAgentStatus("agent-1", "#project", "task-a")
+	s.UpdateAgentStatus("agent-2", "#dev", "task-b")
+
+	agents := s.ListAgents()
+	if len(agents) != 2 {
+		t.Fatalf("ListAgents = %d, want 2", len(agents))
+	}
+
+	// Verify copies are returned.
+	for _, a := range agents {
+		a.Nick = "modified"
+	}
+	agents2 := s.ListAgents()
+	for _, a := range agents2 {
+		if a.Nick == "modified" {
+			t.Error("ListAgents returned mutable references")
+		}
+	}
+}
+
 func TestStateStore_GetTask_ReturnsCopy(t *testing.T) {
 	s := NewStateStore()
 	s.UpdateTask(&protocol.Message{

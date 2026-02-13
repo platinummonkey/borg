@@ -331,6 +331,38 @@ func TestContextStore_Unsubscribe(t *testing.T) {
 	}
 }
 
+func TestContextStore_ListEntries(t *testing.T) {
+	cs := NewContextStore()
+	cs.Store(&protocol.Message{
+		Action:    protocol.ActionContext,
+		Fields:    map[string]string{"component": "auth", "status": "ok"},
+		Nick:      "agent-1",
+		Timestamp: time.Now(),
+	})
+	cs.Store(&protocol.Message{
+		Action:    protocol.ActionContext,
+		Fields:    map[string]string{"component": "database", "status": "migrated"},
+		Nick:      "agent-2",
+		Timestamp: time.Now(),
+	})
+
+	entries := cs.ListEntries()
+	if len(entries) != 2 {
+		t.Fatalf("ListEntries = %d, want 2", len(entries))
+	}
+
+	// Verify copies are returned.
+	for _, e := range entries {
+		e.Status = "modified"
+	}
+	entries2 := cs.ListEntries()
+	for _, e := range entries2 {
+		if e.Status == "modified" {
+			t.Error("ListEntries returned mutable references")
+		}
+	}
+}
+
 func TestContextStore_PendingRequests_ReturnsCopy(t *testing.T) {
 	cs := NewContextStore()
 	cs.TrackRequest(&protocol.Message{

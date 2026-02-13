@@ -169,6 +169,52 @@ irc:
 	}
 }
 
+func TestLoad_DashboardAddr_Flag(t *testing.T) {
+	cfg, err := Load([]string{"--dashboard-addr", ":8080"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.DashboardAddr != ":8080" {
+		t.Errorf("DashboardAddr = %q, want :8080", cfg.DashboardAddr)
+	}
+}
+
+func TestLoad_DashboardAddr_Env(t *testing.T) {
+	t.Setenv("DASHBOARD_ADDR", ":9090")
+	cfg, err := Load([]string{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.DashboardAddr != ":9090" {
+		t.Errorf("DashboardAddr = %q, want :9090", cfg.DashboardAddr)
+	}
+}
+
+func TestLoad_DashboardAddr_File(t *testing.T) {
+	yamlContent := `
+irc:
+  server: "file.example.com:6697"
+  nick: "fileagent"
+  username: "fileuser"
+  password: "filepass"
+  tls: true
+  sasl: true
+dashboard_addr: ":7070"
+`
+	tmpDir := t.TempDir()
+	cfgPath := filepath.Join(tmpDir, "config.yaml")
+	if err := os.WriteFile(cfgPath, []byte(yamlContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Load([]string{"--config", cfgPath})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.DashboardAddr != ":7070" {
+		t.Errorf("DashboardAddr = %q, want :7070", cfg.DashboardAddr)
+	}
+}
+
 func TestSplitChannels(t *testing.T) {
 	tests := []struct {
 		input string
