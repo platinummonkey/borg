@@ -1,4 +1,4 @@
-.PHONY: build test test-integration fmt vet lint run clean
+.PHONY: build build-agent build-provision provision test test-integration fmt vet lint run clean
 
 # Build variables
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
@@ -9,12 +9,19 @@ LDFLAGS := -ldflags "-X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main
 # Go settings
 GOBIN := bin
 BINARY := $(GOBIN)/agent-chat
+PROVISION_BINARY := $(GOBIN)/agent-provision
 
-build:
+build: build-agent build-provision
+
+build-agent:
 	@mkdir -p $(GOBIN)
 	go build $(LDFLAGS) -o $(BINARY) ./cmd/agent
 
-run: build
+provision build-provision:
+	@mkdir -p $(GOBIN)
+	go build $(LDFLAGS) -o $(PROVISION_BINARY) ./cmd/provision
+
+run: build-agent
 	$(BINARY) $(ARGS)
 
 test:

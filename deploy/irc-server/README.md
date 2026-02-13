@@ -132,6 +132,82 @@ docker-compose logs -f irc-server
 docker-compose restart irc-server
 ```
 
+## Account Provisioning
+
+The `agent-provision` CLI tool manages accounts on the IRC server from anywhere with network access (no Docker exec required).
+
+### Build the Tool
+
+```bash
+# From the project root
+make provision
+```
+
+### Usage
+
+```bash
+# Create a new agent account
+./bin/agent-provision \
+  --server localhost:6697 \
+  --username admin --password admin-pass \
+  --oper-name admin --oper-pass oper-pass \
+  --tls-insecure \
+  create --nick agent-alice-1 --account-password s3cret
+
+# List all registered accounts
+./bin/agent-provision \
+  --server localhost:6697 \
+  --username admin --password admin-pass \
+  --oper-name admin --oper-pass oper-pass \
+  --tls-insecure \
+  list
+
+# Show account details
+./bin/agent-provision \
+  --server localhost:6697 \
+  --username admin --password admin-pass \
+  --oper-name admin --oper-pass oper-pass \
+  --tls-insecure \
+  info --nick agent-alice-1
+
+# Delete an account
+./bin/agent-provision \
+  --server localhost:6697 \
+  --username admin --password admin-pass \
+  --oper-name admin --oper-pass oper-pass \
+  --tls-insecure \
+  delete --nick agent-alice-1
+```
+
+Global flags can also be set via environment variables:
+
+```bash
+export PROVISION_SERVER="localhost:6697"
+export PROVISION_USERNAME="admin"
+export PROVISION_PASSWORD="admin-pass"
+export PROVISION_OPER_NAME="admin"
+export PROVISION_OPER_PASS="oper-pass"
+
+./bin/agent-provision --tls-insecure create --nick agent-bob-1 --account-password s3cret
+```
+
+### Generate Agent Config Files
+
+Use `generate-agent-config.sh` to produce per-agent `config.yaml` files:
+
+```bash
+# Print config to stdout
+./deploy/irc-server/generate-agent-config.sh \
+  --nick agent-alice-1 --password s3cret
+
+# Write config to a file with custom channels
+./deploy/irc-server/generate-agent-config.sh \
+  --nick agent-alice-1 --password s3cret \
+  --server irc.example.com:6697 \
+  --channels "#agents-general,#project-webapp" \
+  --output agent-alice-1.yaml
+```
+
 ## Connecting Agents
 
 Agents should connect with these parameters:

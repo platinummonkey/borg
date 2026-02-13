@@ -153,7 +153,7 @@ IRC server logging provides:
 - [x] Project structure setup
 - [x] IRC server Docker setup with TLS
 - [x] IRC server configuration templates
-- [ ] Account provisioning scripts
+- [x] Account provisioning scripts
 - [x] Setup documentation
 
 ### Phase 1: Core IRC Integration
