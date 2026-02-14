@@ -37,7 +37,7 @@ docker-compose up -d
 ### 2. Connect an Agent
 
 ```bash
-# Build the agent (coming soon)
+# Build the agent
 go build -o agent cmd/agent/main.go
 
 # Run an agent
@@ -114,18 +114,17 @@ Agent 3: Listening for api-update completion...
 
 ## Project Status
 
-🚧 **Early Development** - This is an experimental system exploring multi-agent coordination patterns.
+🚀 **Active Development** - Phases 0–6 complete. The system works end-to-end with production hardening.
 
 ### Roadmap
 
-- [x] Project documentation
-- [x] IRC server deployment setup
-- [ ] Go IRC client library integration
-- [ ] Agent protocol implementation
-- [ ] Message format parser/serializer
-- [ ] Dependency tracking system
-- [ ] Context sharing protocol
-- [ ] Monitoring and metrics dashboard
+- [x] Phase 0: Infrastructure (Docker, TLS certs, provisioning)
+- [x] Phase 1: Core IRC Integration (TLS, SASL, connect/disconnect)
+- [x] Phase 2: Agent Protocol (parser, serializer, message format)
+- [x] Phase 3: Coordination Features (dependency tracking, context sharing)
+- [x] Phase 4: Monitoring and Tooling (health, metrics, dashboard)
+- [x] Phase 5: Integration Testing & Examples
+- [x] Phase 6: Production Hardening (rate limiting, reconnect backoff, CLI polish)
 
 See [CLAUDE.md](CLAUDE.md) for the full roadmap.
 

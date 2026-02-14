@@ -187,6 +187,70 @@ func TestRemoveHandler(t *testing.T) {
 	}
 }
 
+func TestSendMessage_RateLimited(t *testing.T) {
+	srv, err := mock.NewIRCServer()
+	if err != nil {
+		t.Fatalf("failed to start mock server: %v", err)
+	}
+	defer srv.Close()
+
+	cfg := validTestConfig(srv.Addr())
+	cfg.RateLimit = 5.0
+	cfg.RateLimitBurst = 2
+
+	client, err := NewClient(cfg)
+	if err != nil {
+		t.Fatalf("NewClient failed: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := client.Connect(ctx); err != nil {
+		t.Fatalf("Connect failed: %v", err)
+	}
+	defer client.Disconnect()
+
+	// First 2 messages should be immediate (burst).
+	start := time.Now()
+	client.SendMessage("#test", "msg1")
+	client.SendMessage("#test", "msg2")
+	burstElapsed := time.Since(start)
+	if burstElapsed > 200*time.Millisecond {
+		t.Errorf("burst messages took too long: %v", burstElapsed)
+	}
+
+	// Third message should be rate-limited (need to wait for a token).
+	start = time.Now()
+	client.SendMessage("#test", "msg3")
+	limitedElapsed := time.Since(start)
+	if limitedElapsed < 50*time.Millisecond {
+		t.Errorf("rate-limited message returned too quickly: %v", limitedElapsed)
+	}
+}
+
+func TestReconnectBackoff_Config(t *testing.T) {
+	cfg := validTestConfig("localhost:6697")
+	cfg.ReconnectBackoff = 500 * time.Millisecond
+	cfg.MaxReconnectBackoff = 30 * time.Second
+
+	client, err := NewClient(cfg)
+	if err != nil {
+		t.Fatalf("NewClient failed: %v", err)
+	}
+
+	ic := client.(*ircClient)
+	if ic.backoff == nil {
+		t.Fatal("expected backoff to be initialized")
+	}
+	if ic.backoff.Base != 500*time.Millisecond {
+		t.Errorf("backoff Base = %v, want 500ms", ic.backoff.Base)
+	}
+	if ic.backoff.Max != 30*time.Second {
+		t.Errorf("backoff Max = %v, want 30s", ic.backoff.Max)
+	}
+}
+
 func TestNick(t *testing.T) {
 	srv, err := mock.NewIRCServer()
 	if err != nil {

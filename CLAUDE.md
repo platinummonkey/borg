@@ -187,6 +187,14 @@ IRC server logging provides:
 - [x] Dashboard endpoint integration test
 - [x] Multi-agent coordination example
 
+### Phase 6: Production Hardening, CLI Polish & Documentation
+- [x] Token bucket rate limiter for outgoing messages
+- [x] Exponential backoff with jitter for reconnection
+- [x] Config fields for rate limit and backoff settings
+- [x] CLI startup banner and `--help` handling
+- [x] Package documentation (`doc.go` files)
+- [x] Updated README roadmap and config example
+
 ## Security Considerations
 
 **Security is mandatory, not optional.** This system requires:

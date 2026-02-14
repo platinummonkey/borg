@@ -58,6 +58,18 @@ type Config struct {
 
 	// Debug enables debug-level logging in the IRC library.
 	Debug bool `yaml:"debug"`
+
+	// RateLimit is the maximum outgoing messages per second. 0 disables rate limiting.
+	RateLimit float64 `yaml:"rate_limit"`
+
+	// RateLimitBurst is the maximum burst size for outgoing messages.
+	RateLimitBurst int `yaml:"rate_limit_burst"`
+
+	// ReconnectBackoff is the initial backoff duration between reconnect attempts.
+	ReconnectBackoff time.Duration `yaml:"reconnect_backoff"`
+
+	// MaxReconnectBackoff is the maximum backoff duration between reconnect attempts.
+	MaxReconnectBackoff time.Duration `yaml:"max_reconnect_backoff"`
 }
 
 // DefaultConfig returns a Config with secure defaults.
@@ -72,6 +84,10 @@ func DefaultConfig() Config {
 		Timeout:              60 * time.Second,
 		QuitMessage:          "agent shutting down",
 		AutoRejoinOnKick:     false,
+		RateLimit:            2.0,
+		RateLimitBurst:       5,
+		ReconnectBackoff:     1 * time.Second,
+		MaxReconnectBackoff:  2 * time.Minute,
 	}
 }
 

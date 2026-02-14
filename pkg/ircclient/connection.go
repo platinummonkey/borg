@@ -20,6 +20,9 @@ type ircClient struct {
 	mu       sync.RWMutex
 	channels map[string]bool
 
+	limiter *RateLimiter
+	backoff *Backoff
+
 	handlerMu    sync.RWMutex
 	nextID       HandlerID
 	msgHandlers  map[HandlerID]MessageHandler
@@ -69,7 +72,11 @@ func NewClient(cfg Config) (Client, error) {
 	conn.HandleErrorAsDisconnect = true
 	conn.SmartErrorHandling = true
 
-	if cfg.MaxReconnectAttempts > 0 {
+	// When we manage our own reconnect with backoff, disable go-ircevo's
+	// internal reconnect to avoid conflicting retry logic.
+	if cfg.ReconnectBackoff > 0 && cfg.MaxReconnectBackoff > 0 {
+		conn.MaxRecoverableReconnects = 0
+	} else if cfg.MaxReconnectAttempts > 0 {
 		conn.MaxRecoverableReconnects = cfg.MaxReconnectAttempts
 	}
 	if cfg.PingFrequency > 0 {
@@ -97,6 +104,13 @@ func NewClient(cfg Config) (Client, error) {
 		discHandlers: make(map[HandlerID]DisconnectHandler),
 		handlerKinds: make(map[HandlerID]string),
 		done:         make(chan error, 1),
+	}
+
+	if cfg.RateLimit > 0 {
+		c.limiter = NewRateLimiter(cfg.RateLimit, cfg.RateLimitBurst)
+	}
+	if cfg.ReconnectBackoff > 0 && cfg.MaxReconnectBackoff > 0 {
+		c.backoff = NewBackoff(cfg.ReconnectBackoff, cfg.MaxReconnectBackoff)
 	}
 
 	c.registerInternalCallbacks()
@@ -237,10 +251,13 @@ func (c *ircClient) Connect(ctx context.Context) error {
 
 	ready := make(chan struct{}, 1)
 
-	// Register a one-time callback for 001 (RPL_WELCOME) to signal readiness.
-	var welcomeID int
-	welcomeID = c.conn.AddCallback("001", func(e *irc.Event) {
-		c.conn.RemoveCallback("001", welcomeID)
+	// Register a callback for 001 (RPL_WELCOME) to signal readiness and handle reconnects.
+	var welcomeOnce sync.Once
+	c.conn.AddCallback("001", func(e *irc.Event) {
+		// Reset backoff on successful (re)connection.
+		if c.backoff != nil {
+			c.backoff.Reset()
+		}
 
 		ev := ConnectEvent{
 			Server:    c.cfg.Server,
@@ -260,28 +277,50 @@ func (c *ircClient) Connect(ctx context.Context) error {
 			c.Join(ch)
 		}
 
-		select {
-		case ready <- struct{}{}:
-		default:
-		}
+		welcomeOnce.Do(func() {
+			select {
+			case ready <- struct{}{}:
+			default:
+			}
+		})
 	})
 
 	if err := c.conn.Connect(c.cfg.Server); err != nil {
 		return fmt.Errorf("connect to %s: %w", c.cfg.Server, err)
 	}
 
-	// Start the event loop in a goroutine.
+	// Start the event loop in a goroutine with reconnect support.
 	go func() {
-		c.conn.Loop()
+		for {
+			c.conn.Loop()
 
-		ev := DisconnectEvent{Server: c.cfg.Server, Timestamp: time.Now()}
-		c.handlerMu.RLock()
-		for _, h := range c.discHandlers {
-			h(ev)
+			ev := DisconnectEvent{Server: c.cfg.Server, Timestamp: time.Now()}
+			c.handlerMu.RLock()
+			for _, h := range c.discHandlers {
+				h(ev)
+			}
+			c.handlerMu.RUnlock()
+
+			if !c.cfg.Reconnect || c.backoff == nil {
+				c.done <- nil
+				return
+			}
+
+			if c.cfg.MaxReconnectAttempts > 0 && c.backoff.Attempt() >= c.cfg.MaxReconnectAttempts {
+				slog.Warn("max reconnect attempts reached", "attempts", c.backoff.Attempt())
+				c.done <- nil
+				return
+			}
+
+			delay := c.backoff.Next()
+			slog.Info("reconnecting", "attempt", c.backoff.Attempt(), "delay", delay)
+			time.Sleep(delay)
+
+			if err := c.conn.Reconnect(); err != nil {
+				slog.Error("reconnect failed", "error", err)
+				continue
+			}
 		}
-		c.handlerMu.RUnlock()
-
-		c.done <- nil
 	}()
 
 	// Wait for 001 or context cancellation.
@@ -330,15 +369,24 @@ func (c *ircClient) JoinedChannels() []string {
 	return chs
 }
 
+func (c *ircClient) waitRateLimit() {
+	if c.limiter != nil {
+		_ = c.limiter.Wait(context.Background())
+	}
+}
+
 func (c *ircClient) SendMessage(target, message string) {
+	c.waitRateLimit()
 	c.conn.Privmsg(target, message)
 }
 
 func (c *ircClient) SendNotice(target, message string) {
+	c.waitRateLimit()
 	c.conn.Notice(target, message)
 }
 
 func (c *ircClient) SendRaw(message string) {
+	c.waitRateLimit()
 	c.conn.SendRaw(message)
 }
 

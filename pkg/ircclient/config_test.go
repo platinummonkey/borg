@@ -3,6 +3,7 @@ package ircclient
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestDefaultConfig(t *testing.T) {
@@ -22,6 +23,18 @@ func TestDefaultConfig(t *testing.T) {
 	}
 	if cfg.MaxReconnectAttempts != 3 {
 		t.Errorf("default max reconnect attempts should be 3, got %d", cfg.MaxReconnectAttempts)
+	}
+	if cfg.RateLimit != 2.0 {
+		t.Errorf("default rate limit should be 2.0, got %f", cfg.RateLimit)
+	}
+	if cfg.RateLimitBurst != 5 {
+		t.Errorf("default rate limit burst should be 5, got %d", cfg.RateLimitBurst)
+	}
+	if cfg.ReconnectBackoff != 1*time.Second {
+		t.Errorf("default reconnect backoff should be 1s, got %v", cfg.ReconnectBackoff)
+	}
+	if cfg.MaxReconnectBackoff != 2*time.Minute {
+		t.Errorf("default max reconnect backoff should be 2m, got %v", cfg.MaxReconnectBackoff)
 	}
 }
 

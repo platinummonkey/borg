@@ -2,6 +2,7 @@ package config
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -35,6 +36,10 @@ type fileConfig struct {
 		AutoRejoinOnKick      bool     `yaml:"auto_rejoin_on_kick"`
 		Reconnect             *bool    `yaml:"reconnect"`
 		MaxReconnectAttempts  int      `yaml:"max_reconnect_attempts"`
+		ReconnectBackoff      string   `yaml:"reconnect_backoff"`
+		MaxReconnectBackoff   string   `yaml:"max_reconnect_backoff"`
+		RateLimit             *float64 `yaml:"rate_limit"`
+		RateLimitBurst        *int     `yaml:"rate_limit_burst"`
 		PingFrequency         string   `yaml:"ping_frequency"`
 		Timeout               string   `yaml:"timeout"`
 		QuitMessage           string   `yaml:"quit_message"`
@@ -56,6 +61,10 @@ func Load(args []string) (*AppConfig, error) {
 
 	// Parse flags (but don't apply yet — we need to know what was explicitly set).
 	fs := flag.NewFlagSet("agent-chat", flag.ContinueOnError)
+	fs.Usage = func() {
+		fmt.Fprintf(fs.Output(), "Usage: agent-chat [flags]\n\nFlags:\n")
+		fs.PrintDefaults()
+	}
 	var (
 		flagServer        = fs.String("server", "", "IRC server address (host:port)")
 		flagNick          = fs.String("nick", "", "Agent nickname")
@@ -71,6 +80,8 @@ func Load(args []string) (*AppConfig, error) {
 		flagLogFmt        = fs.String("log-format", "", "Log format (text, json)")
 		flagDebug         = fs.Bool("debug", false, "Enable IRC debug logging")
 		flagDashboardAddr = fs.String("dashboard-addr", "", "HTTP dashboard listen address (e.g. :8080)")
+		flagRateLimit     = fs.Float64("rate-limit", 0, "Max outgoing messages per second (0 = use default)")
+		flagRateBurst     = fs.Int("rate-limit-burst", 0, "Max burst for outgoing messages (0 = use default)")
 	)
 
 	if err := fs.Parse(args); err != nil {
@@ -121,6 +132,10 @@ func Load(args []string) (*AppConfig, error) {
 			cfg.IRC.Debug = *flagDebug
 		case "dashboard-addr":
 			cfg.DashboardAddr = *flagDashboardAddr
+		case "rate-limit":
+			cfg.IRC.RateLimit = *flagRateLimit
+		case "rate-limit-burst":
+			cfg.IRC.RateLimitBurst = *flagRateBurst
 		}
 	})
 
@@ -173,6 +188,22 @@ func loadFromFile(cfg *AppConfig, path string) error {
 	}
 	if fc.IRC.MaxReconnectAttempts > 0 {
 		cfg.IRC.MaxReconnectAttempts = fc.IRC.MaxReconnectAttempts
+	}
+	if fc.IRC.ReconnectBackoff != "" {
+		if d, err := time.ParseDuration(fc.IRC.ReconnectBackoff); err == nil {
+			cfg.IRC.ReconnectBackoff = d
+		}
+	}
+	if fc.IRC.MaxReconnectBackoff != "" {
+		if d, err := time.ParseDuration(fc.IRC.MaxReconnectBackoff); err == nil {
+			cfg.IRC.MaxReconnectBackoff = d
+		}
+	}
+	if fc.IRC.RateLimit != nil {
+		cfg.IRC.RateLimit = *fc.IRC.RateLimit
+	}
+	if fc.IRC.RateLimitBurst != nil {
+		cfg.IRC.RateLimitBurst = *fc.IRC.RateLimitBurst
 	}
 	if fc.IRC.PingFrequency != "" {
 		if d, err := time.ParseDuration(fc.IRC.PingFrequency); err == nil {
