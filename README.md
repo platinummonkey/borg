@@ -114,7 +114,7 @@ Agent 3: Listening for api-update completion...
 
 ## Project Status
 
-🚀 **Active Development** - Phases 0–6 complete. The system works end-to-end with production hardening.
+🚀 **Active Development** - Phases 0–11 complete.
 
 ### Roadmap
 
@@ -125,6 +125,11 @@ Agent 3: Listening for api-update completion...
 - [x] Phase 4: Monitoring and Tooling (health, metrics, dashboard)
 - [x] Phase 5: Integration Testing & Examples
 - [x] Phase 6: Production Hardening (rate limiting, reconnect backoff, CLI polish)
+- [x] Phase 7: Persistent Dependency State (JSON save/load, atomic writes)
+- [x] Phase 8: Channel-Level ACLs (glob matching, first-match-wins)
+- [x] Phase 9: Agent Discovery Protocol (DISCOVER/CAPABILITIES, TTL store)
+- [x] Phase 10: Multi-Server Federation (relay, loop prevention)
+- [x] Phase 11: Observability (OpenTelemetry tracing + metrics)
 
 See [CLAUDE.md](CLAUDE.md) for the full roadmap.
 

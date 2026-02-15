@@ -4,20 +4,58 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
 
+	agentOtel "github.com/platinummonkey/agent-chat/internal/otel"
 	"github.com/platinummonkey/agent-chat/pkg/ircclient"
+	"github.com/platinummonkey/agent-chat/pkg/protocol"
 )
+
+// ACLRule defines an authorization rule for protocol messages.
+type ACLRule struct {
+	Channel     string            `yaml:"channel"`
+	NickPattern string            `yaml:"nick_pattern"`
+	Actions     []protocol.Action `yaml:"actions"`
+	Effect      string            `yaml:"effect"`
+}
+
+// FederationServerConfig describes a remote IRC server for federation.
+type FederationServerConfig struct {
+	Name string           `yaml:"name"`
+	IRC  ircclient.Config `yaml:"irc"`
+}
+
+// ChannelMapping maps a local channel to a remote channel on a specific link.
+type ChannelMapping struct {
+	LocalChannel  string `yaml:"local_channel"`
+	RemoteChannel string `yaml:"remote_channel"`
+	LinkName      string `yaml:"link_name"`
+}
 
 // AppConfig combines IRC client config with application-level settings.
 type AppConfig struct {
-	IRC           ircclient.Config `yaml:"irc"`
-	LogLevel      string           `yaml:"log_level"`
-	LogFmt        string           `yaml:"log_format"`
-	DashboardAddr string           `yaml:"dashboard_addr"`
+	IRC                ircclient.Config         `yaml:"irc"`
+	LogLevel           string                   `yaml:"log_level"`
+	LogFmt             string                   `yaml:"log_format"`
+	DashboardAddr      string                   `yaml:"dashboard_addr"`
+	StateFile          string                   `yaml:"state_file"`
+	ACLRules           []ACLRule                `yaml:"acl_rules"`
+	Capabilities       []string                 `yaml:"capabilities"`
+	DiscoveryTTL       time.Duration            `yaml:"discovery_ttl"`
+	FederationServers  []FederationServerConfig  `yaml:"federation_servers"`
+	FederationMappings []ChannelMapping          `yaml:"federation_mappings"`
+	OTel               agentOtel.Config          `yaml:"otel"`
+
+	// Coordination (Phases 12–16).
+	AgentRole          string        `yaml:"agent_role"`
+	Roles              []string      `yaml:"roles"`
+	MaxLoad            int           `yaml:"max_load"`
+	ClaimJitter        time.Duration `yaml:"claim_jitter"`
+	MaxReviewIterations int          `yaml:"max_review_iterations"`
 }
 
 // fileConfig mirrors AppConfig for YAML unmarshaling with duration strings.
@@ -45,9 +83,20 @@ type fileConfig struct {
 		QuitMessage           string   `yaml:"quit_message"`
 		Debug                 bool     `yaml:"debug"`
 	} `yaml:"irc"`
-	LogLevel      string `yaml:"log_level"`
-	LogFmt        string `yaml:"log_format"`
-	DashboardAddr string `yaml:"dashboard_addr"`
+	LogLevel      string    `yaml:"log_level"`
+	LogFmt        string    `yaml:"log_format"`
+	DashboardAddr string    `yaml:"dashboard_addr"`
+	StateFile     string    `yaml:"state_file"`
+	ACLRules      []ACLRule `yaml:"acl_rules"`
+	Capabilities       []string                  `yaml:"capabilities"`
+	DiscoveryTTL       string                    `yaml:"discovery_ttl"`
+	FederationServers  []FederationServerConfig  `yaml:"federation_servers"`
+	FederationMappings []ChannelMapping          `yaml:"federation_mappings"`
+	OTel               struct {
+		Endpoint    string  `yaml:"endpoint"`
+		ServiceName string  `yaml:"service_name"`
+		SampleRate  float64 `yaml:"sample_rate"`
+	} `yaml:"otel"`
 }
 
 // Load builds an AppConfig from defaults, config file, environment variables, and CLI flags.
@@ -82,6 +131,16 @@ func Load(args []string) (*AppConfig, error) {
 		flagDashboardAddr = fs.String("dashboard-addr", "", "HTTP dashboard listen address (e.g. :8080)")
 		flagRateLimit     = fs.Float64("rate-limit", 0, "Max outgoing messages per second (0 = use default)")
 		flagRateBurst     = fs.Int("rate-limit-burst", 0, "Max burst for outgoing messages (0 = use default)")
+		flagStateFile     = fs.String("state-file", "", "Path to persist task/dependency state (empty = disabled)")
+		flagCapabilities   = fs.String("capabilities", "", "Comma-separated agent expertise tags for discovery")
+		flagOTelEndpoint   = fs.String("otel-endpoint", "", "OTLP HTTP endpoint (empty = disabled)")
+		flagOTelService    = fs.String("otel-service-name", "", "OTel service name (default: agent-chat)")
+
+		flagRole              = fs.String("role", "", "Agent role (e.g. implementer, reviewer)")
+		flagRoles             = fs.String("roles", "", "Comma-separated agent roles")
+		flagMaxLoad           = fs.Int("max-load", 0, "Maximum concurrent task load for this agent")
+		flagClaimJitter       = fs.String("claim-jitter", "", "Claim arbitration window duration (e.g. 2s)")
+		flagMaxReviewIter     = fs.Int("max-review-iterations", 0, "Max review iterations before auto-escalation (0 = unlimited)")
 	)
 
 	if err := fs.Parse(args); err != nil {
@@ -136,6 +195,26 @@ func Load(args []string) (*AppConfig, error) {
 			cfg.IRC.RateLimit = *flagRateLimit
 		case "rate-limit-burst":
 			cfg.IRC.RateLimitBurst = *flagRateBurst
+		case "state-file":
+			cfg.StateFile = *flagStateFile
+		case "capabilities":
+			cfg.Capabilities = splitChannels(*flagCapabilities) // reuse comma splitter
+		case "otel-endpoint":
+			cfg.OTel.Endpoint = *flagOTelEndpoint
+		case "otel-service-name":
+			cfg.OTel.ServiceName = *flagOTelService
+		case "role":
+			cfg.AgentRole = *flagRole
+		case "roles":
+			cfg.Roles = splitChannels(*flagRoles)
+		case "max-load":
+			cfg.MaxLoad = *flagMaxLoad
+		case "claim-jitter":
+			if d, err := time.ParseDuration(*flagClaimJitter); err == nil {
+				cfg.ClaimJitter = d
+			}
+		case "max-review-iterations":
+			cfg.MaxReviewIterations = *flagMaxReviewIter
 		}
 	})
 
@@ -229,6 +308,35 @@ func loadFromFile(cfg *AppConfig, path string) error {
 	if fc.DashboardAddr != "" {
 		cfg.DashboardAddr = fc.DashboardAddr
 	}
+	if fc.StateFile != "" {
+		cfg.StateFile = fc.StateFile
+	}
+	if len(fc.ACLRules) > 0 {
+		cfg.ACLRules = fc.ACLRules
+	}
+	if len(fc.Capabilities) > 0 {
+		cfg.Capabilities = fc.Capabilities
+	}
+	if fc.DiscoveryTTL != "" {
+		if d, err := time.ParseDuration(fc.DiscoveryTTL); err == nil {
+			cfg.DiscoveryTTL = d
+		}
+	}
+	if len(fc.FederationServers) > 0 {
+		cfg.FederationServers = fc.FederationServers
+	}
+	if len(fc.FederationMappings) > 0 {
+		cfg.FederationMappings = fc.FederationMappings
+	}
+	if fc.OTel.Endpoint != "" {
+		cfg.OTel.Endpoint = fc.OTel.Endpoint
+	}
+	if fc.OTel.ServiceName != "" {
+		cfg.OTel.ServiceName = fc.OTel.ServiceName
+	}
+	if fc.OTel.SampleRate > 0 {
+		cfg.OTel.SampleRate = fc.OTel.SampleRate
+	}
 
 	return nil
 }
@@ -260,6 +368,36 @@ func applyEnv(cfg *AppConfig) {
 	}
 	if v := os.Getenv("DASHBOARD_ADDR"); v != "" {
 		cfg.DashboardAddr = v
+	}
+	if v := os.Getenv("STATE_FILE"); v != "" {
+		cfg.StateFile = v
+	}
+	if v := os.Getenv("AGENT_CAPABILITIES"); v != "" {
+		cfg.Capabilities = splitChannels(v)
+	}
+	if v := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); v != "" {
+		cfg.OTel.Endpoint = v
+	}
+	if v := os.Getenv("AGENT_ROLE"); v != "" {
+		cfg.AgentRole = v
+	}
+	if v := os.Getenv("AGENT_ROLES"); v != "" {
+		cfg.Roles = splitChannels(v)
+	}
+	if v := os.Getenv("MAX_LOAD"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			cfg.MaxLoad = n
+		}
+	}
+	if v := os.Getenv("CLAIM_JITTER"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			cfg.ClaimJitter = d
+		}
+	}
+	if v := os.Getenv("MAX_REVIEW_ITERATIONS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			cfg.MaxReviewIterations = n
+		}
 	}
 }
 

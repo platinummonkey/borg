@@ -2,6 +2,7 @@ package agent
 
 import (
 	"log/slog"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -16,6 +17,10 @@ const (
 	TaskStatusStarted   TaskStatus = "started"
 	TaskStatusCompleted TaskStatus = "completed"
 	TaskStatusBlocked   TaskStatus = "blocked"
+	TaskStatusOffered   TaskStatus = "offered"
+	TaskStatusClaimed   TaskStatus = "claimed"
+	TaskStatusAssigned  TaskStatus = "assigned"
+	TaskStatusYielded   TaskStatus = "yielded"
 )
 
 // TaskInfo holds the tracked state of a task.
@@ -27,6 +32,10 @@ type TaskInfo struct {
 	Tags       []string
 	LastAgent  string
 	UpdatedAt  time.Time
+	Owner      string `json:"owner,omitempty"`
+	Scope      string `json:"scope,omitempty"`
+	Progress   int    `json:"progress,omitempty"`
+	Summary    string `json:"summary,omitempty"`
 }
 
 // DependencyEdge represents a dependency between two tasks.
@@ -102,6 +111,40 @@ func (s *StateStore) UpdateTask(msg *protocol.Message) {
 		info.Status = TaskStatusBlocked
 		info.WaitingFor = msg.Get("waiting-for")
 		s.extractDependenciesLocked(msg, taskName)
+	case protocol.ActionOffer:
+		info.Status = TaskStatusOffered
+		info.Priority = msg.Get("priority")
+		if scope := msg.Get("scope"); scope != "" {
+			info.Scope = scope
+		}
+	case protocol.ActionClaim:
+		info.Status = TaskStatusClaimed
+		info.Owner = msg.Nick
+	case protocol.ActionAssign:
+		info.Status = TaskStatusAssigned
+		info.Owner = msg.Get("to")
+	case protocol.ActionAccept:
+		info.Status = TaskStatusStarted
+		info.Owner = msg.Nick
+	case protocol.ActionDecline:
+		if info.Status == TaskStatusAssigned {
+			info.Status = TaskStatusOffered
+		}
+		info.Owner = ""
+	case protocol.ActionYield:
+		info.Status = TaskStatusYielded
+		info.Owner = ""
+	case protocol.ActionCheckpoint:
+		if p := msg.Get("progress"); p != "" {
+			if v, err := strconv.Atoi(p); err == nil {
+				info.Progress = v
+			}
+		}
+		if s := msg.Get("summary"); s != "" {
+			info.Summary = s
+		}
+	case protocol.ActionHandoff:
+		info.Owner = msg.Get("to")
 	}
 }
 
@@ -391,6 +434,65 @@ func (s *StateStore) DependencyStats() DependencyStatsInfo {
 		}
 	}
 	return stats
+}
+
+// PersistedState is a serializable snapshot of the StateStore.
+type PersistedState struct {
+	Tasks        map[string]*TaskInfo    `json:"tasks"`
+	Dependencies []DependencyEdge        `json:"dependencies"`
+	Agents       map[string]*AgentStatus `json:"agents"`
+	SavedAt      time.Time               `json:"saved_at"`
+}
+
+// Snapshot returns a deep copy of the state store suitable for serialization.
+func (s *StateStore) Snapshot() *PersistedState {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	ps := &PersistedState{
+		Tasks:   make(map[string]*TaskInfo, len(s.tasks)),
+		Agents:  make(map[string]*AgentStatus, len(s.agents)),
+		SavedAt: time.Now(),
+	}
+
+	for k, v := range s.tasks {
+		cp := *v
+		cp.Tags = append([]string(nil), v.Tags...)
+		ps.Tasks[k] = &cp
+	}
+
+	ps.Dependencies = make([]DependencyEdge, len(s.dependencies))
+	copy(ps.Dependencies, s.dependencies)
+
+	for k, v := range s.agents {
+		cp := *v
+		ps.Agents[k] = &cp
+	}
+
+	return ps
+}
+
+// Restore populates the state store from a persisted snapshot.
+// Must be called before any dispatchers are wired.
+func (s *StateStore) Restore(ps *PersistedState) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.tasks = make(map[string]*TaskInfo, len(ps.Tasks))
+	for k, v := range ps.Tasks {
+		cp := *v
+		cp.Tags = append([]string(nil), v.Tags...)
+		s.tasks[k] = &cp
+	}
+
+	s.dependencies = make([]DependencyEdge, len(ps.Dependencies))
+	copy(s.dependencies, ps.Dependencies)
+
+	s.agents = make(map[string]*AgentStatus, len(ps.Agents))
+	for k, v := range ps.Agents {
+		cp := *v
+		s.agents[k] = &cp
+	}
 }
 
 // TransitiveDependencies returns all tasks that taskName transitively depends on

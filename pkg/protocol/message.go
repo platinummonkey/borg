@@ -18,6 +18,29 @@ const (
 	ActionContext        Action = "CONTEXT"
 	ActionRequestContext Action = "REQUEST-CONTEXT"
 	ActionSharingContext Action = "SHARING-CONTEXT"
+	ActionDiscover       Action = "DISCOVER"
+	ActionCapabilities   Action = "CAPABILITIES"
+
+	// Phase 12: Task Board
+	ActionOffer   Action = "OFFER"
+	ActionClaim   Action = "CLAIM"
+	ActionAssign  Action = "ASSIGN"
+	ActionAccept  Action = "ACCEPT"
+	ActionDecline Action = "DECLINE"
+	ActionYield   Action = "YIELD"
+
+	// Phase 13: Checkpoints & Handoffs
+	ActionCheckpoint Action = "CHECKPOINT"
+	ActionHandoff    Action = "HANDOFF"
+
+	// Phase 14: Review & Gate System
+	ActionReviewRequest  Action = "REVIEW-REQUEST"
+	ActionReviewComplete Action = "REVIEW-COMPLETE"
+	ActionGateCheck      Action = "GATE-CHECK"
+
+	// Phase 15: Consensus & Escalation
+	ActionVote     Action = "VOTE"
+	ActionEscalate Action = "ESCALATE"
 )
 
 // validActions is the set of recognized protocol actions.
@@ -30,6 +53,21 @@ var validActions = map[Action]struct{}{
 	ActionContext:        {},
 	ActionRequestContext: {},
 	ActionSharingContext: {},
+	ActionDiscover:       {},
+	ActionCapabilities:   {},
+	ActionOffer:          {},
+	ActionClaim:          {},
+	ActionAssign:         {},
+	ActionAccept:         {},
+	ActionDecline:        {},
+	ActionYield:          {},
+	ActionCheckpoint:     {},
+	ActionHandoff:        {},
+	ActionReviewRequest:  {},
+	ActionReviewComplete: {},
+	ActionGateCheck:      {},
+	ActionVote:           {},
+	ActionEscalate:       {},
 }
 
 // Valid returns true if the action is a recognized protocol action.

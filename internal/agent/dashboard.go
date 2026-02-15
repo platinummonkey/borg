@@ -17,6 +17,11 @@ type Dashboard struct {
 	inspector  *DebugInspector
 	state      *StateStore
 	context    *ContextStore
+	discovery  *DiscoveryStore
+	taskBoard  *TaskBoard
+	handoff    *HandoffStore
+	review     *ReviewStore
+	consensus  *ConsensusStore
 	server     *http.Server
 	addr       string
 	listenAddr string
@@ -30,6 +35,11 @@ func NewDashboard(
 	inspector *DebugInspector,
 	state *StateStore,
 	context *ContextStore,
+	discovery *DiscoveryStore,
+	taskBoard *TaskBoard,
+	handoff *HandoffStore,
+	review *ReviewStore,
+	consensus *ConsensusStore,
 ) *Dashboard {
 	return &Dashboard{
 		addr:      addr,
@@ -38,6 +48,11 @@ func NewDashboard(
 		inspector: inspector,
 		state:     state,
 		context:   context,
+		discovery: discovery,
+		taskBoard: taskBoard,
+		handoff:   handoff,
+		review:    review,
+		consensus: consensus,
 	}
 }
 
@@ -51,6 +66,11 @@ func (d *Dashboard) Start() error {
 	mux.HandleFunc("GET /agents", d.handleAgents)
 	mux.HandleFunc("GET /context", d.handleContext)
 	mux.HandleFunc("GET /messages", d.handleMessages)
+	mux.HandleFunc("GET /discovery", d.handleDiscovery)
+	mux.HandleFunc("GET /taskboard", d.handleTaskBoard)
+	mux.HandleFunc("GET /handoffs", d.handleHandoffs)
+	mux.HandleFunc("GET /reviews", d.handleReviews)
+	mux.HandleFunc("GET /consensus", d.handleConsensus)
 	mux.HandleFunc("GET /", d.handleIndex)
 
 	d.server = &http.Server{
@@ -128,6 +148,66 @@ func (d *Dashboard) handleContext(w http.ResponseWriter, r *http.Request) {
 
 func (d *Dashboard) handleMessages(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, d.inspector.RecentMessages(100))
+}
+
+func (d *Dashboard) handleDiscovery(w http.ResponseWriter, r *http.Request) {
+	if d.discovery == nil {
+		writeJSON(w, []*AgentCapability{})
+		return
+	}
+	agents := d.discovery.ListActive()
+	if agents == nil {
+		agents = []*AgentCapability{}
+	}
+	writeJSON(w, agents)
+}
+
+func (d *Dashboard) handleTaskBoard(w http.ResponseWriter, r *http.Request) {
+	if d.taskBoard == nil {
+		writeJSON(w, []*OfferInfo{})
+		return
+	}
+	offers := d.taskBoard.ListOffers()
+	if offers == nil {
+		offers = []*OfferInfo{}
+	}
+	writeJSON(w, offers)
+}
+
+func (d *Dashboard) handleHandoffs(w http.ResponseWriter, r *http.Request) {
+	if d.handoff == nil {
+		writeJSON(w, []*HandoffRecord{})
+		return
+	}
+	handoffs := d.handoff.ListHandoffs()
+	if handoffs == nil {
+		handoffs = []*HandoffRecord{}
+	}
+	writeJSON(w, handoffs)
+}
+
+func (d *Dashboard) handleReviews(w http.ResponseWriter, r *http.Request) {
+	if d.review == nil {
+		writeJSON(w, []*ReviewRecord{})
+		return
+	}
+	reviews := d.review.ListReviews()
+	if reviews == nil {
+		reviews = []*ReviewRecord{}
+	}
+	writeJSON(w, reviews)
+}
+
+func (d *Dashboard) handleConsensus(w http.ResponseWriter, r *http.Request) {
+	if d.consensus == nil {
+		writeJSON(w, []TopicSummary{})
+		return
+	}
+	topics := d.consensus.ListTopics()
+	if topics == nil {
+		topics = []TopicSummary{}
+	}
+	writeJSON(w, topics)
 }
 
 func (d *Dashboard) handleIndex(w http.ResponseWriter, r *http.Request) {

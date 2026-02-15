@@ -18,7 +18,7 @@ func newTestDashboard() *Dashboard {
 	health := NewHealthMonitor(client, state)
 	metrics := NewMetricsCollector()
 	inspector := NewDebugInspector(state, ctx, 100)
-	return NewDashboard(":0", health, metrics, inspector, state, ctx)
+	return NewDashboard(":0", health, metrics, inspector, state, ctx, nil, nil, nil, nil, nil)
 }
 
 func newTestDashboardWithData() *Dashboard {
@@ -48,7 +48,7 @@ func newTestDashboardWithData() *Dashboard {
 		Timestamp: time.Now(), Direction: "in", Channel: "#test", Nick: "agent-1", Action: "STARTED", Raw: "STARTED task=task-a",
 	})
 
-	return NewDashboard(":0", health, metrics, inspector, state, ctx)
+	return NewDashboard(":0", health, metrics, inspector, state, ctx, nil, nil, nil, nil, nil)
 }
 
 func dashboardHandler(d *Dashboard) http.Handler {
@@ -60,6 +60,11 @@ func dashboardHandler(d *Dashboard) http.Handler {
 	mux.HandleFunc("GET /agents", d.handleAgents)
 	mux.HandleFunc("GET /context", d.handleContext)
 	mux.HandleFunc("GET /messages", d.handleMessages)
+	mux.HandleFunc("GET /discovery", d.handleDiscovery)
+	mux.HandleFunc("GET /taskboard", d.handleTaskBoard)
+	mux.HandleFunc("GET /handoffs", d.handleHandoffs)
+	mux.HandleFunc("GET /reviews", d.handleReviews)
+	mux.HandleFunc("GET /consensus", d.handleConsensus)
 	mux.HandleFunc("GET /", d.handleIndex)
 	return mux
 }

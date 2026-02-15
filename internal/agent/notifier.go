@@ -12,12 +12,24 @@ import (
 type NotificationEvent string
 
 const (
-	NotifyTaskCompleted NotificationEvent = "task_completed"
-	NotifyTaskBlocked   NotificationEvent = "task_blocked"
-	NotifyTaskStarted   NotificationEvent = "task_started"
-	NotifyHelpNeeded    NotificationEvent = "help_needed"
-	NotifyContextUpdate NotificationEvent = "context_update"
-	NotifyUnblocked     NotificationEvent = "unblocked"
+	NotifyTaskCompleted    NotificationEvent = "task_completed"
+	NotifyTaskBlocked      NotificationEvent = "task_blocked"
+	NotifyTaskStarted      NotificationEvent = "task_started"
+	NotifyHelpNeeded       NotificationEvent = "help_needed"
+	NotifyContextUpdate    NotificationEvent = "context_update"
+	NotifyUnblocked        NotificationEvent = "unblocked"
+	NotifyTaskOffered      NotificationEvent = "task_offered"
+	NotifyTaskClaimed      NotificationEvent = "task_claimed"
+	NotifyTaskAssigned     NotificationEvent = "task_assigned"
+	NotifyTaskYielded      NotificationEvent = "task_yielded"
+	NotifyCheckpoint       NotificationEvent = "checkpoint"
+	NotifyHandoff          NotificationEvent = "handoff"
+	NotifyReviewRequested  NotificationEvent = "review_requested"
+	NotifyReviewCompleted  NotificationEvent = "review_completed"
+	NotifyGatePassed       NotificationEvent = "gate_passed"
+	NotifyGateFailed       NotificationEvent = "gate_failed"
+	NotifyVote             NotificationEvent = "vote"
+	NotifyEscalation       NotificationEvent = "escalation"
 )
 
 // NotificationFormatter formats a notification event and protocol message into a string.
@@ -97,6 +109,10 @@ func (n *Notifier) HandleMessage(msg *protocol.Message) {
 	if msg.Action == protocol.ActionAcknowledged && msg.HasTag("auto-unblock") {
 		event = NotifyUnblocked
 	}
+	// Check for gate fail.
+	if msg.Action == protocol.ActionGateCheck && msg.Get("status") == "failed" {
+		event = NotifyGateFailed
+	}
 
 	n.mu.RLock()
 	var matching []NotificationRule
@@ -133,6 +149,28 @@ func actionToEvent(action protocol.Action) NotificationEvent {
 		return NotifyContextUpdate
 	case protocol.ActionAcknowledged:
 		return NotifyUnblocked
+	case protocol.ActionOffer:
+		return NotifyTaskOffered
+	case protocol.ActionClaim:
+		return NotifyTaskClaimed
+	case protocol.ActionAssign:
+		return NotifyTaskAssigned
+	case protocol.ActionYield:
+		return NotifyTaskYielded
+	case protocol.ActionCheckpoint:
+		return NotifyCheckpoint
+	case protocol.ActionHandoff:
+		return NotifyHandoff
+	case protocol.ActionReviewRequest:
+		return NotifyReviewRequested
+	case protocol.ActionReviewComplete:
+		return NotifyReviewCompleted
+	case protocol.ActionGateCheck:
+		return NotifyGatePassed // default; HandleMessage checks status field
+	case protocol.ActionVote:
+		return NotifyVote
+	case protocol.ActionEscalate:
+		return NotifyEscalation
 	default:
 		return ""
 	}
@@ -167,6 +205,30 @@ func DefaultNotificationFormatter(event NotificationEvent, msg *protocol.Message
 			return fmt.Sprintf("[UNBLOCKED] task %q unblocked by completion of %q", task, unblockedBy)
 		}
 		return fmt.Sprintf("[UNBLOCKED] task %q unblocked", task)
+	case NotifyTaskOffered:
+		return fmt.Sprintf("[OFFERED] %s offered task %q in %s", msg.Nick, task, msg.Channel)
+	case NotifyTaskClaimed:
+		return fmt.Sprintf("[CLAIMED] %s claimed task %q", msg.Nick, task)
+	case NotifyTaskAssigned:
+		return fmt.Sprintf("[ASSIGNED] %s assigned task %q to %s", msg.Nick, task, msg.Get("to"))
+	case NotifyTaskYielded:
+		return fmt.Sprintf("[YIELDED] %s yielded task %q", msg.Nick, task)
+	case NotifyCheckpoint:
+		return fmt.Sprintf("[CHECKPOINT] %s checkpoint on %q: %s%% - %s", msg.Nick, task, msg.Get("progress"), msg.Get("summary"))
+	case NotifyHandoff:
+		return fmt.Sprintf("[HANDOFF] %s handed off %q to %s", msg.Nick, task, msg.Get("to"))
+	case NotifyReviewRequested:
+		return fmt.Sprintf("[REVIEW-REQUEST] %s requested %s review for %q", msg.Nick, msg.Get("review-type"), task)
+	case NotifyReviewCompleted:
+		return fmt.Sprintf("[REVIEW-COMPLETE] %s reviewed %q: %s", msg.Nick, task, msg.Get("verdict"))
+	case NotifyGatePassed:
+		return fmt.Sprintf("[GATE-CHECK] %s gate %q for %q: %s", msg.Nick, msg.Get("gate"), task, msg.Get("status"))
+	case NotifyGateFailed:
+		return fmt.Sprintf("[GATE-FAILED] %s gate %q for %q failed: %s", msg.Nick, msg.Get("gate"), task, msg.Get("details"))
+	case NotifyVote:
+		return fmt.Sprintf("[VOTE] %s voted %q on topic %q", msg.Nick, msg.Get("choice"), msg.Get("topic"))
+	case NotifyEscalation:
+		return fmt.Sprintf("[ESCALATE] %s escalated %q to %s: %s (severity: %s)", msg.Nick, task, msg.Get("to"), msg.Get("reason"), msg.Get("severity"))
 	default:
 		return ""
 	}

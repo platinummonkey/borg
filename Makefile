@@ -1,4 +1,4 @@
-.PHONY: build build-agent build-provision provision test test-integration fmt vet lint run run-example clean
+.PHONY: build build-agent build-provision provision test test-integration test-e2e test-podman fmt vet lint run run-example clean
 
 # Build variables
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
@@ -33,6 +33,12 @@ test-coverage:
 
 test-integration:
 	go test -race -tags=integration -count=1 ./test/integration/...
+
+test-e2e:
+	go test -race -tags=integration -count=1 -v ./test/integration/...
+
+test-podman:
+	go test -race -tags=podman -count=1 -v -timeout=120s ./test/integration/...
 
 fmt:
 	go fmt ./...

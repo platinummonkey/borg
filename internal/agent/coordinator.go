@@ -1,8 +1,11 @@
 package agent
 
 import (
+	"context"
 	"fmt"
 	"sync"
+
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/platinummonkey/agent-chat/pkg/ircclient"
 	"github.com/platinummonkey/agent-chat/pkg/protocol"
@@ -40,6 +43,10 @@ func (n *UnblockNotifier) OnTaskCompleted(msg *protocol.Message) {
 	if completedTask == "" {
 		return
 	}
+
+	_, span := startSpan(context.Background(), "coordinator.resolve_dependencies",
+		attribute.String("completed_task", completedTask))
+	defer span.End()
 
 	unblocked := n.state.UnblockedTasks()
 	if len(unblocked) == 0 {

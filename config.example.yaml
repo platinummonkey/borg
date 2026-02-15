@@ -70,3 +70,43 @@ irc:
 # Logging
 log_level: "info"    # debug, info, warn, error
 log_format: "text"   # text, json
+
+# Path to persist task/dependency state (empty = disabled)
+# state_file: ""
+
+# ACL rules (first match wins, default allow)
+# acl_rules:
+#   - channel: "#secure-ops"
+#     nick_pattern: "agent-alice-*"
+#     actions: ["COMPLETED", "STARTED"]
+#     effect: "allow"
+#   - channel: "#secure-ops"
+#     nick_pattern: "*"
+#     effect: "deny"
+
+# Agent expertise tags for discovery
+# capabilities: ["database", "frontend", "testing"]
+# discovery_ttl: "5m"
+
+# Federation: connect to multiple IRC servers and relay messages
+# federation_servers:
+#   - name: "east"
+#     irc:
+#       server: "irc-east.example.com:6697"
+#       nick: "agent-alice-1-east"
+#       username: "agent-alice-1"
+#       password: "password"
+#       tls: true
+#       sasl: true
+#       channels: ["#project-webapp"]
+#
+# federation_mappings:
+#   - local_channel: "#project-webapp"
+#     remote_channel: "#project-webapp"
+#     link_name: "east"
+
+# OpenTelemetry observability (empty endpoint = disabled)
+# otel:
+#   endpoint: ""             # OTLP HTTP endpoint
+#   service_name: "agent-chat"
+#   sample_rate: 1.0

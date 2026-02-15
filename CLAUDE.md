@@ -195,6 +195,75 @@ IRC server logging provides:
 - [x] Package documentation (`doc.go` files)
 - [x] Updated README roadmap and config example
 
+### Phase 7: Persistent Dependency State
+- [x] JSON save/load for StateStore (Snapshot/Restore)
+- [x] Atomic file writes (write-to-temp + rename)
+- [x] Debounced persistence on state changes
+- [x] Config: `state_file`, `--state-file` flag, `STATE_FILE` env
+
+### Phase 8: Channel-Level ACLs
+- [x] ACL engine with glob matching (first-match-wins)
+- [x] Inbound and outbound ACL checks
+- [x] Hot-reload via SetRules
+- [x] Config: `acl_rules` (YAML file only)
+
+### Phase 9: Agent Discovery Protocol
+- [x] DISCOVER and CAPABILITIES protocol actions
+- [x] DiscoveryStore with TTL-based expiry
+- [x] Auto-response to DISCOVER requests
+- [x] Periodic CAPABILITIES heartbeat
+- [x] `/discovery` dashboard endpoint
+- [x] Config: `capabilities`, `discovery_ttl`, `--capabilities` flag
+
+### Phase 10: Multi-Server Federation
+- [x] FederationManager for multi-server relay
+- [x] Channel mappings (local ↔ remote)
+- [x] Loop prevention via `[fed:<origin>]` prefix
+- [x] Config: `federation_servers`, `federation_mappings` (YAML file only)
+
+### Phase 11: Observability (OpenTelemetry)
+- [x] Optional OTel integration (no-op when unconfigured)
+- [x] Distributed tracing spans for protocol dispatch, send, coordinator
+- [x] OTel metric counters mirroring atomic counters
+- [x] Config: `otel.endpoint`, `otel.service_name`, `otel.sample_rate`
+
+### Phase 12: Task Board — OFFER/CLAIM/ASSIGN Lifecycle
+- [x] 6 new protocol actions: OFFER, CLAIM, ASSIGN, ACCEPT, DECLINE, YIELD
+- [x] TaskBoard store with offer tracking and claim arbitration
+- [x] Load-based claim arbitration with configurable jitter window
+- [x] Extended TaskInfo with Owner, Scope, Progress, Summary fields
+- [x] New task statuses: offered, claimed, assigned, yielded
+- [x] `/taskboard` dashboard endpoint
+- [x] Config: `--role`, `--max-load`, `--claim-jitter` flags
+
+### Phase 13: Checkpoints & Handoffs
+- [x] CHECKPOINT and HANDOFF protocol actions
+- [x] HandoffStore with checkpoint history and handoff tracking
+- [x] Context-id linking for bundled context with handoffs
+- [x] `/handoffs` dashboard endpoint
+
+### Phase 14: Review & Gate System
+- [x] REVIEW-REQUEST, REVIEW-COMPLETE, GATE-CHECK protocol actions
+- [x] ReviewStore with review tracking, gate tracking, iteration counting
+- [x] ReviewSummary with NeedsEscalation flag
+- [x] AllGatesPassed aggregation (latest status per gate name)
+- [x] `/reviews` dashboard endpoint
+- [x] Config: `--max-review-iterations` flag
+
+### Phase 15: Consensus Voting & Escalation
+- [x] VOTE and ESCALATE protocol actions
+- [x] ConsensusStore with vote tallying (last vote per nick wins)
+- [x] EscalationRecord tracking with resolution
+- [x] `/consensus` dashboard endpoint
+
+### Phase 16: Role Engine & Workflow Orchestration
+- [x] RoleEngine with role constants and RoleBehavior auto-responders
+- [x] 9 built-in roles: architecture-reviewer, security-reviewer, monitoring-guardian, merge-coordinator, release-coordinator, cleanup-agent, incident-responder, etc.
+- [x] WorkflowEngine with WorkflowDefinition and WorkflowInstance tracking
+- [x] Built-in workflows: GatedPipeline, CollaborativeHandoff
+- [x] Role expertise tags merged into CAPABILITIES discovery
+- [x] Config: `--roles` flag, `AGENT_ROLES` env var
+
 ## Security Considerations
 
 **Security is mandatory, not optional.** This system requires:
