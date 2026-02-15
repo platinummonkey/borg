@@ -264,6 +264,17 @@ IRC server logging provides:
 - [x] Role expertise tags merged into CAPABILITIES discovery
 - [x] Config: `--roles` flag, `AGENT_ROLES` env var
 
+### Phase 17: Agent Management Frontend
+- [x] `COST-REPORT` protocol action + `CostStore` with aggregation
+- [x] `Spawner` interface with `LocalSpawner`, `SSHSpawner`, `DockerSpawner`
+- [x] `AgentRegistry` for tracking spawned + discovered agents
+- [x] `Manager` core: IRC observer, dashboard poller, spawner integration
+- [x] WebSocket hub with Server-Sent Events for live updates
+- [x] HTTP API: `/api/agents`, `/api/costs`, `/api/tasks`, `/api/messages`, `/api/discovery`
+- [x] Web UI: dashboard, agent detail, spawn form, cost tracking, task board
+- [x] `cmd/manager/main.go` binary entry point
+- [x] Config: `--listen-addr`, `--agent-binary`, `--poll-interval` flags
+
 ## Security Considerations
 
 **Security is mandatory, not optional.** This system requires:

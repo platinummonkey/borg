@@ -1,0 +1,77 @@
+{{define "page-content"}}
+<h2>Spawn New Agent</h2>
+<form id="spawn-form">
+  <div class="form-group">
+    <label>Spawner Type</label>
+    <select id="spawner-type" name="spawner_type">
+      <option value="local">Local</option>
+      <option value="ssh">SSH</option>
+      <option value="docker">Docker</option>
+    </select>
+  </div>
+  <div class="form-group"><label>Nick</label><input type="text" name="nick" required></div>
+  <div class="form-group"><label>IRC Server</label><input type="text" name="server" required></div>
+  <div class="form-group"><label>Username</label><input type="text" name="username" required></div>
+  <div class="form-group"><label>Password</label><input type="password" name="password" required></div>
+  <div class="form-group"><label>Channels (comma-separated)</label><input type="text" name="channels"></div>
+  <div class="form-group"><label>Capabilities (comma-separated)</label><input type="text" name="capabilities"></div>
+  <div class="form-group"><label>Dashboard Address</label><input type="text" name="dashboard_addr" placeholder=":8080"></div>
+  <div id="local-fields" class="spawner-fields">
+    <div class="form-group"><label>Binary Path</label><input type="text" name="binary_path"></div>
+  </div>
+  <div id="ssh-fields" class="spawner-fields" style="display:none">
+    <div class="form-group"><label>SSH Host</label><input type="text" name="ssh_host"></div>
+    <div class="form-group"><label>SSH User</label><input type="text" name="ssh_user"></div>
+    <div class="form-group"><label>SSH Key Path</label><input type="text" name="ssh_key_path"></div>
+  </div>
+  <div id="docker-fields" class="spawner-fields" style="display:none">
+    <div class="form-group"><label>Docker Image</label><input type="text" name="docker_image"></div>
+    <div class="form-group"><label>Docker Network</label><input type="text" name="docker_network"></div>
+  </div>
+  <button type="submit" class="btn">Spawn Agent</button>
+  <div id="spawn-result" style="margin-top:12px"></div>
+</form>
+{{end}}
+{{define "page-scripts"}}
+<script>
+document.getElementById('spawner-type').addEventListener('change', function() {
+  document.querySelectorAll('.spawner-fields').forEach(el => el.style.display = 'none');
+  const sel = this.value;
+  const fields = document.getElementById(sel + '-fields');
+  if (fields) fields.style.display = 'block';
+});
+
+document.getElementById('spawn-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const fd = new FormData(this);
+  const splitCSV = v => v ? v.split(',').map(s => s.trim()).filter(Boolean) : [];
+  const body = {
+    spawner_type: fd.get('spawner_type'),
+    config: {
+      nick: fd.get('nick'), server: fd.get('server'),
+      username: fd.get('username'), password: fd.get('password'),
+      channels: splitCSV(fd.get('channels')),
+      capabilities: splitCSV(fd.get('capabilities')),
+      dashboard_addr: fd.get('dashboard_addr'),
+      binary_path: fd.get('binary_path'),
+      ssh_host: fd.get('ssh_host'), ssh_user: fd.get('ssh_user'), ssh_key_path: fd.get('ssh_key_path'),
+      docker_image: fd.get('docker_image'), docker_network: fd.get('docker_network'),
+    }
+  };
+  const result = document.getElementById('spawn-result');
+  try {
+    const resp = await fetch('/api/agents/spawn', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+    if (resp.ok) {
+      result.textContent = 'Agent spawned successfully!';
+      result.style.color = '#00ff88';
+    } else {
+      result.textContent = 'Error: ' + await resp.text();
+      result.style.color = '#ff4444';
+    }
+  } catch(err) {
+    result.textContent = 'Error: ' + err.message;
+    result.style.color = '#ff4444';
+  }
+});
+</script>
+{{end}}

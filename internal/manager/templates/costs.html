@@ -1,0 +1,70 @@
+{{define "page-content"}}
+<h2>Cost Tracking</h2>
+<div id="cost-summary" class="metrics-row"></div>
+<h3>By Agent</h3>
+<div id="cost-by-agent"></div>
+<h3>By Task</h3>
+<div id="cost-by-task"></div>
+<h3>By Model</h3>
+<div id="cost-by-model"></div>
+{{end}}
+{{define "page-scripts"}}
+<script>
+function renderCostTable(el, data) {
+  el.replaceChildren();
+  const entries = Object.entries(data);
+  if (!entries.length) {
+    el.textContent = 'No data';
+    return;
+  }
+  const table = document.createElement('table');
+  const header = document.createElement('tr');
+  ['Name', 'Cost USD', 'Input Tokens', 'Output Tokens', 'Total Tokens', 'Entries'].forEach(h => {
+    const th = document.createElement('th');
+    th.textContent = h;
+    header.appendChild(th);
+  });
+  table.appendChild(header);
+  entries.forEach(([name, s]) => {
+    const tr = document.createElement('tr');
+    [name, '$'+s.total_cost_usd.toFixed(4), s.input_tokens, s.output_tokens, s.total_tokens, s.entry_count].forEach(v => {
+      const td = document.createElement('td');
+      td.textContent = v;
+      tr.appendChild(td);
+    });
+    table.appendChild(tr);
+  });
+  el.appendChild(table);
+}
+
+async function refreshCosts() {
+  try {
+    const [summary, byAgent, byTask, byModel] = await Promise.all([
+      fetchJSON('/api/costs'), fetchJSON('/api/costs/by-agent'),
+      fetchJSON('/api/costs/by-task'), fetchJSON('/api/costs/by-model')
+    ]);
+    const cs = document.getElementById('cost-summary');
+    cs.replaceChildren();
+    [{v: '$'+summary.total_cost_usd.toFixed(4), l: 'Total Cost'}, {v: summary.total_tokens, l: 'Total Tokens'}, {v: summary.entry_count, l: 'Reports'}].forEach(m => {
+      const card = document.createElement('div');
+      card.className = 'metric-card';
+      const val = document.createElement('div');
+      val.className = 'metric-value';
+      val.textContent = m.v;
+      const lbl = document.createElement('div');
+      lbl.className = 'metric-label';
+      lbl.textContent = m.l;
+      card.appendChild(val);
+      card.appendChild(lbl);
+      cs.appendChild(card);
+    });
+    renderCostTable(document.getElementById('cost-by-agent'), byAgent);
+    renderCostTable(document.getElementById('cost-by-task'), byTask);
+    renderCostTable(document.getElementById('cost-by-model'), byModel);
+  } catch(e) { console.error(e); }
+}
+refreshCosts();
+setInterval(refreshCosts, 5000);
+ws.on('cost', refreshCosts);
+</script>
+{{end}}

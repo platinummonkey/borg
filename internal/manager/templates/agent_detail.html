@@ -1,0 +1,51 @@
+{{define "page-content"}}
+<h2>Agent Detail</h2>
+<div id="agent-info"></div>
+<div id="agent-health"></div>
+<div id="agent-metrics"></div>
+<div id="agent-costs"></div>
+{{end}}
+{{define "page-scripts"}}
+<script>
+const nick = location.pathname.split('/').pop();
+async function refreshAgent() {
+  try {
+    const agent = await fetchJSON('/api/agents/' + encodeURIComponent(nick));
+    const info = document.getElementById('agent-info');
+    info.replaceChildren();
+    const h = document.createElement('h3');
+    h.textContent = agent.nick;
+    info.appendChild(h);
+    const dl = document.createElement('dl');
+    [['Status', agent.status], ['Source', agent.source], ['Spawner', agent.spawner_type || '-'],
+     ['Channels', (agent.channels || []).join(', ')], ['Capabilities', (agent.capabilities || []).join(', ')],
+     ['Current Task', agent.current_task || '-']
+    ].forEach(([k, v]) => {
+      const dt = document.createElement('dt');
+      dt.textContent = k;
+      dt.style.color = '#888';
+      dt.style.fontSize = '11px';
+      const dd = document.createElement('dd');
+      dd.textContent = v;
+      dd.style.marginBottom = '8px';
+      dl.appendChild(dt);
+      dl.appendChild(dd);
+    });
+    info.appendChild(dl);
+    if (agent.instance) {
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-danger';
+      btn.textContent = 'Stop Agent';
+      btn.addEventListener('click', async () => {
+        if (!confirm('Stop ' + nick + '?')) return;
+        await fetch('/api/agents/' + encodeURIComponent(nick) + '/stop', {method: 'POST'});
+        refreshAgent();
+      });
+      info.appendChild(btn);
+    }
+  } catch(e) { console.error(e); }
+}
+refreshAgent();
+setInterval(refreshAgent, 5000);
+</script>
+{{end}}

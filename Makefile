@@ -10,8 +10,9 @@ LDFLAGS := -ldflags "-X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main
 GOBIN := bin
 BINARY := $(GOBIN)/agent-chat
 PROVISION_BINARY := $(GOBIN)/agent-provision
+MANAGER_BINARY := $(GOBIN)/agent-manager
 
-build: build-agent build-provision
+build: build-agent build-provision build-manager
 
 build-agent:
 	@mkdir -p $(GOBIN)
@@ -20,6 +21,10 @@ build-agent:
 provision build-provision:
 	@mkdir -p $(GOBIN)
 	go build $(LDFLAGS) -o $(PROVISION_BINARY) ./cmd/provision
+
+build-manager:
+	@mkdir -p $(GOBIN)
+	go build $(LDFLAGS) -o $(MANAGER_BINARY) ./cmd/manager
 
 run: build-agent
 	$(BINARY) $(ARGS)
@@ -53,3 +58,5 @@ run-example:
 
 clean:
 	rm -rf $(GOBIN) coverage.out
+
+.PHONY: build-manager

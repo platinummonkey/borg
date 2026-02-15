@@ -41,6 +41,9 @@ const (
 	// Phase 15: Consensus & Escalation
 	ActionVote     Action = "VOTE"
 	ActionEscalate Action = "ESCALATE"
+
+	// Phase 17: Agent Management
+	ActionCostReport Action = "COST-REPORT"
 )
 
 // validActions is the set of recognized protocol actions.
@@ -68,6 +71,7 @@ var validActions = map[Action]struct{}{
 	ActionGateCheck:      {},
 	ActionVote:           {},
 	ActionEscalate:       {},
+	ActionCostReport:     {},
 }
 
 // Valid returns true if the action is a recognized protocol action.

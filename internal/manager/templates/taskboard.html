@@ -1,0 +1,47 @@
+{{define "page-content"}}
+<h2>Cross-Agent Task Board</h2>
+<div id="taskboard" class="kanban"></div>
+{{end}}
+{{define "page-scripts"}}
+<script>
+const columns = ['offered', 'claimed', 'started', 'blocked', 'completed'];
+
+async function refreshTaskboard() {
+  try {
+    const tasks = await fetchJSON('/api/tasks');
+    const board = document.getElementById('taskboard');
+    board.replaceChildren();
+    columns.forEach(status => {
+      const col = document.createElement('div');
+      col.className = 'kanban-column';
+      const h4 = document.createElement('h4');
+      h4.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+      col.appendChild(h4);
+      tasks.filter(t => (t.Status || '').toLowerCase() === status).forEach(t => {
+        const card = document.createElement('div');
+        card.className = 'task-card';
+        const name = document.createElement('strong');
+        name.textContent = t.Name;
+        card.appendChild(name);
+        if (t.LastAgent) {
+          const owner = document.createElement('div');
+          owner.textContent = 'Agent: ' + t.LastAgent;
+          owner.style.color = '#888';
+          card.appendChild(owner);
+        }
+        if (t.Progress) {
+          const prog = document.createElement('div');
+          prog.textContent = 'Progress: ' + t.Progress + '%';
+          card.appendChild(prog);
+        }
+        col.appendChild(card);
+      });
+      board.appendChild(col);
+    });
+  } catch(e) { console.error(e); }
+}
+refreshTaskboard();
+setInterval(refreshTaskboard, 5000);
+ws.on('task_update', refreshTaskboard);
+</script>
+{{end}}
