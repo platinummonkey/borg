@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/platinummonkey/agent-chat/pkg/protocol"
+	"github.com/platinummonkey/borg/pkg/protocol"
 )
 
 func TestUnblockNotifier_OnTaskCompleted(t *testing.T) {

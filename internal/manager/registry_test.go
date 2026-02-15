@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/platinummonkey/agent-chat/internal/agent"
-	"github.com/platinummonkey/agent-chat/internal/cost"
+	"github.com/platinummonkey/borg/internal/agent"
+	"github.com/platinummonkey/borg/internal/cost"
 )
 
 func TestRegistry_RegisterAndGet(t *testing.T) {

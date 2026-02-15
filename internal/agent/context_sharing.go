@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/platinummonkey/agent-chat/pkg/ircclient"
-	"github.com/platinummonkey/agent-chat/pkg/protocol"
+	"github.com/platinummonkey/borg/pkg/ircclient"
+	"github.com/platinummonkey/borg/pkg/protocol"
 )
 
 // ContextEntry holds shared context for a component.

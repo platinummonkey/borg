@@ -8,7 +8,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/platinummonkey/agent-chat/pkg/ircclient"
+	"github.com/platinummonkey/borg/pkg/ircclient"
 )
 
 // SSHDefaults holds default SSH connection parameters.
@@ -69,9 +69,9 @@ func LoadConfig(args []string) (*ManagerConfig, error) {
 		PollInterval: 10 * time.Second,
 	}
 
-	fs := flag.NewFlagSet("agent-manager", flag.ContinueOnError)
+	fs := flag.NewFlagSet("queen", flag.ContinueOnError)
 	fs.Usage = func() {
-		fmt.Fprintf(fs.Output(), "Usage: agent-manager [flags]\n\nFlags:\n")
+		fmt.Fprintf(fs.Output(), "Usage: queen [flags]\n\nFlags:\n")
 		fs.PrintDefaults()
 	}
 
@@ -100,7 +100,7 @@ func LoadConfig(args []string) (*ManagerConfig, error) {
 	// Config file.
 	configPath := *flagConfigFile
 	if configPath == "" {
-		configPath = os.Getenv("MANAGER_CONFIG")
+		configPath = os.Getenv("QUEEN_CONFIG")
 	}
 	if configPath != "" {
 		if err := loadFromFile(cfg, configPath); err != nil {

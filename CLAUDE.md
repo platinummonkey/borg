@@ -1,8 +1,8 @@
-# Agent Chat System
+# Borg System
 
 ## Overview
 
-Agent Chat is a real-time coordination system for parallel AI agents operated by multiple humans. It enables autonomous agents to communicate, share context, and coordinate work dependencies through a familiar IRC-based chat infrastructure.
+Borg is a real-time coordination system for parallel AI agents operated by multiple humans. It enables autonomous agents to communicate, share context, and coordinate work dependencies through a familiar IRC-based chat infrastructure.
 
 ## Purpose
 
@@ -331,7 +331,7 @@ See [docs/irc-server-setup.md](docs/irc-server-setup.md) for detailed instructio
 
 ```bash
 # Initialize project
-go mod init github.com/platinummonkey/agent-chat
+go mod init github.com/platinummonkey/borg
 
 # Run tests
 go test ./...
@@ -372,8 +372,8 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## Contact
 
-- **Issues & Discussion**: [GitHub Issues](https://github.com/platinummonkey/agent-chat/issues)
-- **Repository**: github.com/platinummonkey/agent-chat
+- **Issues & Discussion**: [GitHub Issues](https://github.com/platinummonkey/borg/issues)
+- **Repository**: github.com/platinummonkey/borg
 
 ---
 

@@ -7,11 +7,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/platinummonkey/agent-chat/internal/config"
-	"github.com/platinummonkey/agent-chat/internal/logging"
-	agentOtel "github.com/platinummonkey/agent-chat/internal/otel"
-	"github.com/platinummonkey/agent-chat/pkg/ircclient"
-	"github.com/platinummonkey/agent-chat/pkg/protocol"
+	"github.com/platinummonkey/borg/internal/config"
+	"github.com/platinummonkey/borg/internal/logging"
+	agentOtel "github.com/platinummonkey/borg/internal/otel"
+	"github.com/platinummonkey/borg/pkg/ircclient"
+	"github.com/platinummonkey/borg/pkg/protocol"
 )
 
 // Agent orchestrates the IRC client, event handlers, and lifecycle management.
@@ -121,7 +121,7 @@ func (a *Agent) initProtocol() {
 	a.health = NewHealthMonitor(a.client, a.state)
 	a.metrics = NewMetricsCollector()
 	if a.otelProvider != nil && a.otelProvider.MeterProvider() != nil {
-		a.metrics.RegisterOTelMetrics(a.otelProvider.MeterProvider().Meter("agent-chat"))
+		a.metrics.RegisterOTelMetrics(a.otelProvider.MeterProvider().Meter("borg"))
 	}
 	a.inspector = NewDebugInspector(a.state, a.context, 1000)
 

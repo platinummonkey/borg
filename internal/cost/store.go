@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/platinummonkey/agent-chat/pkg/protocol"
+	"github.com/platinummonkey/borg/pkg/protocol"
 )
 
 // CostEntry represents a single cost report from an agent.

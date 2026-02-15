@@ -10,9 +10,9 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	agentOtel "github.com/platinummonkey/agent-chat/internal/otel"
-	"github.com/platinummonkey/agent-chat/pkg/ircclient"
-	"github.com/platinummonkey/agent-chat/pkg/protocol"
+	agentOtel "github.com/platinummonkey/borg/internal/otel"
+	"github.com/platinummonkey/borg/pkg/ircclient"
+	"github.com/platinummonkey/borg/pkg/protocol"
 )
 
 // ACLRule defines an authorization rule for protocol messages.
@@ -109,9 +109,9 @@ func Load(args []string) (*AppConfig, error) {
 	}
 
 	// Parse flags (but don't apply yet — we need to know what was explicitly set).
-	fs := flag.NewFlagSet("agent-chat", flag.ContinueOnError)
+	fs := flag.NewFlagSet("borg", flag.ContinueOnError)
 	fs.Usage = func() {
-		fmt.Fprintf(fs.Output(), "Usage: agent-chat [flags]\n\nFlags:\n")
+		fmt.Fprintf(fs.Output(), "Usage: borg [flags]\n\nFlags:\n")
 		fs.PrintDefaults()
 	}
 	var (
@@ -134,7 +134,7 @@ func Load(args []string) (*AppConfig, error) {
 		flagStateFile     = fs.String("state-file", "", "Path to persist task/dependency state (empty = disabled)")
 		flagCapabilities   = fs.String("capabilities", "", "Comma-separated agent expertise tags for discovery")
 		flagOTelEndpoint   = fs.String("otel-endpoint", "", "OTLP HTTP endpoint (empty = disabled)")
-		flagOTelService    = fs.String("otel-service-name", "", "OTel service name (default: agent-chat)")
+		flagOTelService    = fs.String("otel-service-name", "", "OTel service name (default: borg)")
 
 		flagRole              = fs.String("role", "", "Agent role (e.g. implementer, reviewer)")
 		flagRoles             = fs.String("roles", "", "Comma-separated agent roles")
@@ -150,7 +150,7 @@ func Load(args []string) (*AppConfig, error) {
 	// Layer 2: Config file (overrides defaults).
 	configPath := *flagConfigFile
 	if configPath == "" {
-		configPath = os.Getenv("AGENT_CHAT_CONFIG")
+		configPath = os.Getenv("BORG_CONFIG")
 	}
 	if configPath != "" {
 		if err := loadFromFile(cfg, configPath); err != nil {

@@ -7,7 +7,7 @@ import (
 
 	"go.opentelemetry.io/otel/metric"
 
-	"github.com/platinummonkey/agent-chat/pkg/protocol"
+	"github.com/platinummonkey/borg/pkg/protocol"
 )
 
 // MetricsSnapshot holds a point-in-time snapshot of agent metrics.

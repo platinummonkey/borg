@@ -1,6 +1,6 @@
 # IRC Server Setup Guide
 
-Comprehensive guide for setting up a secure IRC server for the Agent Chat coordination system.
+Comprehensive guide for setting up a secure IRC server for the Borg coordination system.
 
 ## Table of Contents
 
@@ -18,7 +18,7 @@ Comprehensive guide for setting up a secure IRC server for the Agent Chat coordi
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│                    Agent Chat System                     │
+│                    Borg System                     │
 ├──────────────────────────────────────────────────────────┤
 │                                                          │
 │  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐   │
@@ -171,7 +171,7 @@ version: '3.8'
 services:
   irc-server:
     image: ergochat/ergo:stable
-    container_name: agent-chat-irc
+    container_name: borg-irc
     restart: always
     ports:
       - "6697:6697"
@@ -183,7 +183,7 @@ services:
     environment:
       - ERGO_CONFIG=/ircd.yaml
     networks:
-      - agent-chat-network
+      - borg-network
     logging:
       driver: "json-file"
       options:
@@ -198,12 +198,12 @@ services:
   # Optional: Prometheus metrics exporter
   irc-exporter:
     image: your-custom-irc-exporter
-    container_name: agent-chat-metrics
+    container_name: borg-metrics
     restart: always
     depends_on:
       - irc-server
     networks:
-      - agent-chat-network
+      - borg-network
 
 volumes:
   irc-data:
@@ -211,16 +211,16 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: /opt/agent-chat/data
+      device: /opt/borg/data
   irc-logs:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: /opt/agent-chat/logs
+      device: /opt/borg/logs
 
 networks:
-  agent-chat-network:
+  borg-network:
     driver: bridge
 ```
 
@@ -385,7 +385,7 @@ logging:
 
 ```bash
 # Generate password hash
-docker exec -it agent-chat-irc oragono genpasswd
+docker exec -it borg-irc oragono genpasswd
 # Enter password, copy the hash
 
 # Add to ircd.yaml under accounts section
@@ -428,7 +428,7 @@ AGENT_NAME=$1
 PASSWORD=$2
 
 # Generate password hash
-HASH=$(docker exec -i agent-chat-irc oragono genpasswd <<EOF
+HASH=$(docker exec -i borg-irc oragono genpasswd <<EOF
 $PASSWORD
 $PASSWORD
 EOF
@@ -539,7 +539,7 @@ sudo ufw status
 grep -A10 "require-sasl" /etc/ergo/ircd.yaml
 
 # Verify account exists
-docker exec -it agent-chat-irc oragono mkcerts --conf /ircd.yaml
+docker exec -it borg-irc oragono mkcerts --conf /ircd.yaml
 
 # Check logs
 tail -50 /var/log/ergo/ircd.log | grep -i auth
@@ -613,13 +613,13 @@ mkdir -p $BACKUP_DIR
 
 # Backup data
 docker run --rm \
-  -v agent-chat_irc-data:/data \
+  -v borg_irc-data:/data \
   -v $BACKUP_DIR:/backup \
   alpine tar czf /backup/data-$DATE.tar.gz /data
 
 # Backup logs
 docker run --rm \
-  -v agent-chat_irc-logs:/logs \
+  -v borg_irc-logs:/logs \
   -v $BACKUP_DIR:/backup \
   alpine tar czf /backup/logs-$DATE.tar.gz /logs
 
@@ -640,7 +640,7 @@ docker-compose down
 
 # Restore data
 docker run --rm \
-  -v agent-chat_irc-data:/data \
+  -v borg_irc-data:/data \
   -v /backup/irc:/backup \
   alpine tar xzf /backup/data-TIMESTAMP.tar.gz -C /
 
@@ -655,7 +655,7 @@ docker-compose up -d
 
 - **Ergo Documentation**: https://ergo.chat/
 - **IRC Protocol**: https://modern.ircdocs.horse/
-- **Agent Chat Issues**: https://github.com/platinummonkey/agent-chat/issues
+- **Borg Issues**: https://github.com/platinummonkey/borg/issues
 - **IRC Community**: #ergo on irc.ergo.chat
 
 ---

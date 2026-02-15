@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/platinummonkey/agent-chat/pkg/protocol"
+	"github.com/platinummonkey/borg/pkg/protocol"
 )
 
 func newTestDashboard() *Dashboard {

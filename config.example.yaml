@@ -1,4 +1,4 @@
-# Agent Chat Configuration Example
+# Borg Configuration Example
 # Copy to config.yaml and customize.
 
 irc:
@@ -108,5 +108,5 @@ log_format: "text"   # text, json
 # OpenTelemetry observability (empty endpoint = disabled)
 # otel:
 #   endpoint: ""             # OTLP HTTP endpoint
-#   service_name: "agent-chat"
+#   service_name: "borg"
 #   sample_rate: 1.0

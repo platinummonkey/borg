@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/platinummonkey/agent-chat/pkg/ircclient"
-	"github.com/platinummonkey/agent-chat/pkg/protocol"
+	"github.com/platinummonkey/borg/pkg/ircclient"
+	"github.com/platinummonkey/borg/pkg/protocol"
 )
 
 // mockIRCClient implements ircclient.Client for protocol dispatcher testing.

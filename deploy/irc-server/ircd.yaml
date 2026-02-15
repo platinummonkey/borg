@@ -1,11 +1,11 @@
-# Ergo IRC Server Configuration for Agent Chat
+# Ergo IRC Server Configuration for Borg
 # This is a secure-by-default configuration for multi-agent coordination
 
 network:
-    name: AgentChatNetwork
+    name: BorgNetwork
 
 server:
-    name: agent-chat.local
+    name: borg.local
     # Customize this to your domain
     # name: irc.yourdomain.com
 
@@ -147,18 +147,18 @@ limits:
 ip-cloaking:
     enabled: true
     enabled-for-always-on: true
-    netname: "agent-chat"
+    netname: "borg"
 
 # MOTD (Message of the Day)
 motd: |
     ┌─────────────────────────────────────────────┐
-    │   Agent Chat Coordination Network           │
+    │   Borg Coordination Network           │
     │   Secure IRC Server for Multi-Agent Work    │
     ├─────────────────────────────────────────────┤
     │ • TLS/SASL Authentication Required          │
     │ • All connections are logged                │
     │ • Channel: #agents-general for coordination │
-    │ • Docs: github.com/platinummonkey/agent-chat│
+    │ • Docs: github.com/platinummonkey/borg│
     └─────────────────────────────────────────────┘
 
 # Server language

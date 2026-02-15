@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/platinummonkey/agent-chat/test/mock"
+	"github.com/platinummonkey/borg/test/mock"
 )
 
 func validTestConfig(addr string) Config {

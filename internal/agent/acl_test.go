@@ -3,8 +3,8 @@ package agent
 import (
 	"testing"
 
-	"github.com/platinummonkey/agent-chat/internal/config"
-	"github.com/platinummonkey/agent-chat/pkg/protocol"
+	"github.com/platinummonkey/borg/internal/config"
+	"github.com/platinummonkey/borg/pkg/protocol"
 )
 
 func TestACL_DefaultAllow(t *testing.T) {

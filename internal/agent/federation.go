@@ -7,8 +7,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/platinummonkey/agent-chat/internal/config"
-	"github.com/platinummonkey/agent-chat/pkg/ircclient"
+	"github.com/platinummonkey/borg/internal/config"
+	"github.com/platinummonkey/borg/pkg/ircclient"
 )
 
 // FederationLink represents a connection to a remote IRC server.

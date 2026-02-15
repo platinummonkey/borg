@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/platinummonkey/agent-chat/internal/agent"
-	"github.com/platinummonkey/agent-chat/internal/config"
-	"github.com/platinummonkey/agent-chat/pkg/ircclient"
-	"github.com/platinummonkey/agent-chat/test/mock"
+	"github.com/platinummonkey/borg/internal/agent"
+	"github.com/platinummonkey/borg/internal/config"
+	"github.com/platinummonkey/borg/pkg/ircclient"
+	"github.com/platinummonkey/borg/test/mock"
 )
 
 func main() {

@@ -17,7 +17,7 @@ func TestDockerSpawner_PreSpawn_Validation(t *testing.T) {
 			name: "valid",
 			cfg: SpawnConfig{
 				Nick: "a", Server: "s", Username: "u", Password: "p",
-				DockerImage: "agent-chat:latest",
+				DockerImage: "borg:latest",
 			},
 		},
 		{
@@ -31,7 +31,7 @@ func TestDockerSpawner_PreSpawn_Validation(t *testing.T) {
 			name: "missing nick",
 			cfg: SpawnConfig{
 				Server: "s", Username: "u", Password: "p",
-				DockerImage: "agent-chat:latest",
+				DockerImage: "borg:latest",
 			},
 			wantErr: true,
 		},
@@ -54,7 +54,7 @@ func TestBuildDockerRunCommand(t *testing.T) {
 		Username:      "user",
 		Password:      "pass",
 		Channels:      []string{"#test"},
-		DockerImage:   "agent-chat:latest",
+		DockerImage:   "borg:latest",
 		DockerNetwork: "agent-net",
 	}
 
@@ -81,7 +81,7 @@ func TestBuildDockerRunCommand(t *testing.T) {
 		if arg == "--network" && i+1 < len(cmd) && cmd[i+1] == "agent-net" {
 			foundNetwork = true
 		}
-		if arg == "agent-chat:latest" {
+		if arg == "borg:latest" {
 			foundImage = true
 		}
 	}
@@ -92,7 +92,7 @@ func TestBuildDockerRunCommand(t *testing.T) {
 		t.Error("expected --network agent-net")
 	}
 	if !foundImage {
-		t.Error("expected image agent-chat:latest")
+		t.Error("expected image borg:latest")
 	}
 }
 

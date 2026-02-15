@@ -1,6 +1,6 @@
-# Agent Chat IRC Server Deployment
+# Borg IRC Server Deployment
 
-This directory contains everything needed to deploy a secure IRC server for the Agent Chat coordination system.
+This directory contains everything needed to deploy a secure IRC server for the Borg coordination system.
 
 ## Quick Start
 
@@ -12,7 +12,7 @@ mkdir -p tls
 
 # Option A: Self-signed certificate (for testing)
 openssl req -x509 -newkey rsa:4096 -keyout tls/server.key -out tls/server.crt \
-  -days 365 -nodes -subj "/CN=agent-chat.local"
+  -days 365 -nodes -subj "/CN=borg.local"
 
 # Option B: Use Let's Encrypt (for production)
 # See docs/irc-server-setup.md for certbot instructions
@@ -51,7 +51,7 @@ openssl s_client -connect localhost:6697 -quiet
 
 ```bash
 # Connect to the running container
-docker exec -it agent-chat-irc /bin/sh
+docker exec -it borg-irc /bin/sh
 
 # Generate password for an agent
 oragono genpasswd
@@ -101,14 +101,14 @@ docker-compose logs -f irc-server
 docker-compose logs --tail=100 irc-server
 
 # Logs are also persisted in the irc-logs volume
-docker run --rm -v agent-chat_irc-logs:/logs alpine cat /logs/ircd.log
+docker run --rm -v borg_irc-logs:/logs alpine cat /logs/ircd.log
 ```
 
 ### Backup Data
 
 ```bash
 # Backup account database and channel data
-docker run --rm -v agent-chat_irc-data:/data -v $(pwd):/backup alpine \
+docker run --rm -v borg_irc-data:/data -v $(pwd):/backup alpine \
   tar czf /backup/irc-backup-$(date +%Y%m%d).tar.gz /data
 ```
 
@@ -134,7 +134,7 @@ docker-compose restart irc-server
 
 ## Account Provisioning
 
-The `agent-provision` CLI tool manages accounts on the IRC server from anywhere with network access (no Docker exec required).
+The `assimilate` CLI tool manages accounts on the IRC server from anywhere with network access (no Docker exec required).
 
 ### Build the Tool
 
@@ -147,7 +147,7 @@ make provision
 
 ```bash
 # Create a new agent account
-./bin/agent-provision \
+./bin/assimilate \
   --server localhost:6697 \
   --username admin --password admin-pass \
   --oper-name admin --oper-pass oper-pass \
@@ -155,7 +155,7 @@ make provision
   create --nick agent-alice-1 --account-password s3cret
 
 # List all registered accounts
-./bin/agent-provision \
+./bin/assimilate \
   --server localhost:6697 \
   --username admin --password admin-pass \
   --oper-name admin --oper-pass oper-pass \
@@ -163,7 +163,7 @@ make provision
   list
 
 # Show account details
-./bin/agent-provision \
+./bin/assimilate \
   --server localhost:6697 \
   --username admin --password admin-pass \
   --oper-name admin --oper-pass oper-pass \
@@ -171,7 +171,7 @@ make provision
   info --nick agent-alice-1
 
 # Delete an account
-./bin/agent-provision \
+./bin/assimilate \
   --server localhost:6697 \
   --username admin --password admin-pass \
   --oper-name admin --oper-pass oper-pass \
@@ -188,7 +188,7 @@ export PROVISION_PASSWORD="admin-pass"
 export PROVISION_OPER_NAME="admin"
 export PROVISION_OPER_PASS="oper-pass"
 
-./bin/agent-provision --tls-insecure create --nick agent-bob-1 --account-password s3cret
+./bin/assimilate --tls-insecure create --nick agent-bob-1 --account-password s3cret
 ```
 
 ### Generate Agent Config Files
@@ -283,6 +283,6 @@ See [docs/irc-server-setup.md](../../docs/irc-server-setup.md) for detailed prod
 
 ## Support
 
-- **Issues**: https://github.com/platinummonkey/agent-chat/issues
+- **Issues**: https://github.com/platinummonkey/borg/issues
 - **Ergo Docs**: https://ergo.chat/
 - **IRC Spec**: https://modern.ircdocs.horse/

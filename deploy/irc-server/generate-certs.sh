@@ -31,7 +31,7 @@ echo "Certificate Configuration"
 echo "-------------------------"
 read -p "Domain name (e.g., irc.example.com): " DOMAIN
 if [ -z "$DOMAIN" ]; then
-    DOMAIN="agent-chat.local"
+    DOMAIN="borg.local"
     echo "Using default: $DOMAIN"
 fi
 
@@ -45,7 +45,7 @@ read -p "City: " CITY
 CITY=${CITY:-City}
 
 read -p "Organization: " ORG
-ORG=${ORG:-AgentChat}
+ORG=${ORG:-Borg}
 
 read -p "Validity in days (default: 365): " DAYS
 DAYS=${DAYS:-365}

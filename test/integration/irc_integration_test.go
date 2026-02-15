@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/platinummonkey/agent-chat/pkg/ircclient"
+	"github.com/platinummonkey/borg/pkg/ircclient"
 )
 
 // TestIRCIntegration_FullLifecycle tests against a real Ergo IRC server running in Docker.

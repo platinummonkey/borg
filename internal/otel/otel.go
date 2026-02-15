@@ -16,7 +16,7 @@ import (
 // Config holds OpenTelemetry configuration.
 type Config struct {
 	Endpoint    string  `yaml:"endpoint"`     // OTLP HTTP endpoint (empty = disabled)
-	ServiceName string  `yaml:"service_name"` // default "agent-chat"
+	ServiceName string  `yaml:"service_name"` // default "borg"
 	SampleRate  float64 `yaml:"sample_rate"`  // 0.0–1.0, default 1.0
 }
 
@@ -33,7 +33,7 @@ func Setup(ctx context.Context, cfg Config) (*Provider, error) {
 	}
 
 	if cfg.ServiceName == "" {
-		cfg.ServiceName = "agent-chat"
+		cfg.ServiceName = "borg"
 	}
 	if cfg.SampleRate <= 0 || cfg.SampleRate > 1.0 {
 		cfg.SampleRate = 1.0

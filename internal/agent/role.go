@@ -4,7 +4,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/platinummonkey/agent-chat/pkg/protocol"
+	"github.com/platinummonkey/borg/pkg/protocol"
 )
 
 // Role constants for built-in agent roles.

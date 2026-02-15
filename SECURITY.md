@@ -2,7 +2,7 @@
 
 ## Security Model
 
-Agent Chat is designed for self-hosted deployments where you control the infrastructure. Security is **mandatory**, not optional.
+Borg is designed for self-hosted deployments where you control the infrastructure. Security is **mandatory**, not optional.
 
 ### Core Security Requirements
 
@@ -284,7 +284,7 @@ Subscribe to security announcements:
 ## Contact
 
 - **Security Issues**: [security@yourdomain.com] (TODO: update)
-- **General Issues**: [GitHub Issues](https://github.com/platinummonkey/agent-chat/issues)
+- **General Issues**: [GitHub Issues](https://github.com/platinummonkey/borg/issues)
 
 ---
 

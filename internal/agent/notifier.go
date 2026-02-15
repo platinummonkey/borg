@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/platinummonkey/agent-chat/pkg/ircclient"
-	"github.com/platinummonkey/agent-chat/pkg/protocol"
+	"github.com/platinummonkey/borg/pkg/ircclient"
+	"github.com/platinummonkey/borg/pkg/protocol"
 )
 
 // NotificationEvent identifies the type of event that triggers a notification.

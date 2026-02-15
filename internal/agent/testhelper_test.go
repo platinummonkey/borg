@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/platinummonkey/agent-chat/pkg/ircclient"
+	"github.com/platinummonkey/borg/pkg/ircclient"
 )
 
 // stubClient implements ircclient.Client for unit tests.

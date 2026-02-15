@@ -17,14 +17,14 @@ func TestSSHSpawner_PreSpawn_Validation(t *testing.T) {
 			name: "valid",
 			cfg: SpawnConfig{
 				Nick: "a", Server: "s", Username: "u", Password: "p",
-				SSHHost: "host", SSHUser: "user", BinaryPath: "/usr/bin/agent-chat",
+				SSHHost: "host", SSHUser: "user", BinaryPath: "/usr/bin/borg",
 			},
 		},
 		{
 			name: "missing ssh_host",
 			cfg: SpawnConfig{
 				Nick: "a", Server: "s", Username: "u", Password: "p",
-				SSHUser: "user", BinaryPath: "/usr/bin/agent-chat",
+				SSHUser: "user", BinaryPath: "/usr/bin/borg",
 			},
 			wantErr: true,
 		},
@@ -32,7 +32,7 @@ func TestSSHSpawner_PreSpawn_Validation(t *testing.T) {
 			name: "missing ssh_user",
 			cfg: SpawnConfig{
 				Nick: "a", Server: "s", Username: "u", Password: "p",
-				SSHHost: "host", BinaryPath: "/usr/bin/agent-chat",
+				SSHHost: "host", BinaryPath: "/usr/bin/borg",
 			},
 			wantErr: true,
 		},
@@ -63,7 +63,7 @@ func TestBuildSSHCommand(t *testing.T) {
 		SSHKeyPath: "/home/deploy/.ssh/id_ed25519",
 	}
 
-	cmd := BuildSSHCommand(cfg, "agent-chat --nick test")
+	cmd := BuildSSHCommand(cfg, "borg --nick test")
 
 	// Verify structure.
 	if cmd[0] != "ssh" {
@@ -88,8 +88,8 @@ func TestBuildSSHCommand(t *testing.T) {
 	if cmd[len(cmd)-2] != "deploy@10.0.0.1" {
 		t.Errorf("target = %q, want %q", cmd[len(cmd)-2], "deploy@10.0.0.1")
 	}
-	if cmd[len(cmd)-1] != "agent-chat --nick test" {
-		t.Errorf("remote cmd = %q, want %q", cmd[len(cmd)-1], "agent-chat --nick test")
+	if cmd[len(cmd)-1] != "borg --nick test" {
+		t.Errorf("remote cmd = %q, want %q", cmd[len(cmd)-1], "borg --nick test")
 	}
 }
 

@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/platinummonkey/agent-chat/internal/manager"
+	"github.com/platinummonkey/borg/internal/manager"
 )
 
 // Set via ldflags at build time.
@@ -21,7 +21,7 @@ var (
 
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "--version" {
-		fmt.Printf("agent-manager %s (commit: %s, built: %s)\n", version, commit, buildTime)
+		fmt.Printf("queen %s (commit: %s, built: %s)\n", version, commit, buildTime)
 		os.Exit(0)
 	}
 
@@ -65,7 +65,7 @@ func printBanner(cfg *manager.ManagerConfig) {
 		channels = "(none)"
 	}
 
-	fmt.Printf("agent-manager %s (commit: %s)\n", version, commit)
+	fmt.Printf("queen %s (commit: %s)\n", version, commit)
 	fmt.Printf("  IRC Server: %s (%s)\n", cfg.IRC.Server, security)
 	fmt.Printf("  Nick:       %s\n", cfg.IRC.Nick)
 	fmt.Printf("  Channels:   %s\n", channels)

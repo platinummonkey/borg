@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/platinummonkey/agent-chat/internal/agent"
-	"github.com/platinummonkey/agent-chat/internal/spawner"
+	"github.com/platinummonkey/borg/internal/agent"
+	"github.com/platinummonkey/borg/internal/spawner"
 )
 
 // Server is the HTTP + WebSocket server for the manager web UI.

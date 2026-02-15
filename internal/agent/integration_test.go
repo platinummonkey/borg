@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/platinummonkey/agent-chat/internal/config"
-	"github.com/platinummonkey/agent-chat/pkg/ircclient"
-	"github.com/platinummonkey/agent-chat/pkg/protocol"
-	"github.com/platinummonkey/agent-chat/test/mock"
+	"github.com/platinummonkey/borg/internal/config"
+	"github.com/platinummonkey/borg/pkg/ircclient"
+	"github.com/platinummonkey/borg/pkg/protocol"
+	"github.com/platinummonkey/borg/test/mock"
 )
 
 // TestMultiAgentProtocol tests two agents communicating through a mock IRC server

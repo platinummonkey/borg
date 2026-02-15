@@ -3,7 +3,7 @@ package cost
 import (
 	"testing"
 
-	"github.com/platinummonkey/agent-chat/pkg/protocol"
+	"github.com/platinummonkey/borg/pkg/protocol"
 )
 
 func TestBuildCostMessage(t *testing.T) {

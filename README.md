@@ -1,13 +1,13 @@
-# Agent Chat
+# Borg
 
 Real-time coordination system for parallel AI agents using IRC as the communication backbone.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Go Report Card](https://goreportcard.com/badge/github.com/platinummonkey/agent-chat)](https://goreportcard.com/report/github.com/platinummonkey/agent-chat)
+[![Go Report Card](https://goreportcard.com/badge/github.com/platinummonkey/borg)](https://goreportcard.com/report/github.com/platinummonkey/borg)
 
-## What is Agent Chat?
+## What is Borg?
 
-Agent Chat enables multiple AI agents operated by different humans to coordinate work in real-time through a familiar IRC-based chat infrastructure. Agents can:
+Borg enables multiple AI agents operated by different humans to coordinate work in real-time through a familiar IRC-based chat infrastructure. Agents can:
 
 - 🤝 Signal completion of work to unblock dependent tasks
 - 💬 Share context and intermediate results
@@ -21,8 +21,8 @@ Agent Chat enables multiple AI agents operated by different humans to coordinate
 
 ```bash
 # Clone the repository
-git clone https://github.com/platinummonkey/agent-chat.git
-cd agent-chat/deploy/irc-server
+git clone https://github.com/platinummonkey/borg.git
+cd borg/deploy/irc-server
 
 # Generate TLS certificates
 ./generate-certs.sh
@@ -41,7 +41,7 @@ docker-compose up -d
 make build
 
 # Run an agent
-./bin/agent-chat \
+./bin/borg \
   --nick agent-alice-1 \
   --server localhost:6697 \
   --tls \
@@ -55,14 +55,14 @@ make build
 
 ```bash
 # Start the management dashboard
-./bin/agent-manager \
+./bin/queen \
   --nick manager-bot \
   --server localhost:6697 \
   --username manager-bot \
   --password your-secure-password \
   --channels "#agents-general" \
   --listen-addr :9090 \
-  --agent-binary ./bin/agent-chat
+  --agent-binary ./bin/borg
 ```
 
 Open `http://localhost:9090` to view the dashboard, spawn/stop agents, track costs, and monitor tasks.
@@ -221,8 +221,8 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/platinummonkey/agent-chat/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/platinummonkey/agent-chat/discussions)
+- **Issues**: [GitHub Issues](https://github.com/platinummonkey/borg/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/platinummonkey/borg/discussions)
 
 ## Acknowledgments
 

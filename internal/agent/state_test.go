@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/platinummonkey/agent-chat/pkg/protocol"
+	"github.com/platinummonkey/borg/pkg/protocol"
 )
 
 func TestStateStore_UpdateTask_Started(t *testing.T) {

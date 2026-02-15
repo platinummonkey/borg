@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/platinummonkey/agent-chat/pkg/ircclient"
+	"github.com/platinummonkey/borg/pkg/ircclient"
 )
 
 // Set via ldflags at build time.
@@ -29,7 +29,7 @@ type provisionConfig struct {
 
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "--version" {
-		fmt.Printf("agent-provision %s (commit: %s, built: %s)\n", version, commit, buildTime)
+		fmt.Printf("assimilate %s (commit: %s, built: %s)\n", version, commit, buildTime)
 		os.Exit(0)
 	}
 
@@ -96,7 +96,7 @@ func main() {
 }
 
 func printUsage() {
-	fmt.Fprintf(os.Stderr, `Usage: agent-provision [flags] <command> [command-flags]
+	fmt.Fprintf(os.Stderr, `Usage: assimilate [flags] <command> [command-flags]
 
 Commands:
   create    Register a new account

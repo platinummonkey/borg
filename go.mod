@@ -1,4 +1,4 @@
-module github.com/platinummonkey/agent-chat
+module github.com/platinummonkey/borg
 
 go 1.25.0
 

@@ -3,7 +3,7 @@ version: '3.8'
 services:
   irc-server:
     image: ergochat/ergo:stable
-    container_name: agent-chat-irc
+    container_name: borg-irc
     restart: unless-stopped
     ports:
       # TLS/SSL port (secure connections only)
@@ -24,7 +24,7 @@ services:
       # Ergo will use /ircd.yaml as config
       - ERGO_CONFIG=/ircd.yaml
     networks:
-      - agent-chat-network
+      - borg-network
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "6697"]
       interval: 30s
@@ -37,14 +37,14 @@ services:
   #
   # thelounge:
   #   image: thelounge/thelounge:latest
-  #   container_name: agent-chat-webclient
+  #   container_name: borg-webclient
   #   restart: unless-stopped
   #   ports:
   #     - "9000:9000"
   #   volumes:
   #     - thelounge-data:/var/opt/thelounge
   #   networks:
-  #     - agent-chat-network
+  #     - borg-network
   #   depends_on:
   #     - irc-server
 
@@ -57,5 +57,5 @@ volumes:
   #   driver: local
 
 networks:
-  agent-chat-network:
+  borg-network:
     driver: bridge

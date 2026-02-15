@@ -1,5 +1,5 @@
 // Package manager provides the central management plane for observing,
-// spawning, and monitoring multiple agent-chat agents.
+// spawning, and monitoring multiple borg drones.
 //
 // The [Manager] connects to IRC as an observer, watches all protocol
 // messages to populate local stores, polls agent dashboard endpoints

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/platinummonkey/agent-chat/pkg/ircclient"
+	"github.com/platinummonkey/borg/pkg/ircclient"
 )
 
 // TaskStatsInfo holds aggregate task statistics.

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/platinummonkey/agent-chat/pkg/protocol"
+	"github.com/platinummonkey/borg/pkg/protocol"
 )
 
 func TestDebugInspector_TaskGraph(t *testing.T) {

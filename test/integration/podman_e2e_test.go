@@ -22,13 +22,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/platinummonkey/agent-chat/internal/agent"
-	"github.com/platinummonkey/agent-chat/internal/config"
-	"github.com/platinummonkey/agent-chat/pkg/ircclient"
+	"github.com/platinummonkey/borg/internal/agent"
+	"github.com/platinummonkey/borg/internal/config"
+	"github.com/platinummonkey/borg/pkg/ircclient"
 )
 
 const (
-	podmanContainerName = "agent-chat-test-irc"
+	podmanContainerName = "borg-test-irc"
 	ergoImage           = "ghcr.io/ergochat/ergo:stable"
 )
 

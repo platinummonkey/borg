@@ -8,9 +8,9 @@ LDFLAGS := -ldflags "-X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main
 
 # Go settings
 GOBIN := bin
-BINARY := $(GOBIN)/agent-chat
-PROVISION_BINARY := $(GOBIN)/agent-provision
-MANAGER_BINARY := $(GOBIN)/agent-manager
+BINARY := $(GOBIN)/borg
+PROVISION_BINARY := $(GOBIN)/assimilate
+MANAGER_BINARY := $(GOBIN)/queen
 
 build: build-agent build-provision build-manager
 

@@ -8,11 +8,15 @@
 # Test binary, built with `go test -c`
 *.test
 
-# Output of the go coverage tool
+# Output of the go coverage tool, profiling
 *.out
+*.prof
+*.pprof
+coverage.html
 
-# Go workspace file
+# Go workspace files
 go.work
+go.work.sum
 
 # Dependency directories
 vendor/
@@ -67,3 +71,6 @@ dist/
 tmp/
 temp/
 *.tmp
+
+# State files (agent persistence)
+*.state.json

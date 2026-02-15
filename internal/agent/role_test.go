@@ -3,7 +3,7 @@ package agent
 import (
 	"testing"
 
-	"github.com/platinummonkey/agent-chat/pkg/protocol"
+	"github.com/platinummonkey/borg/pkg/protocol"
 )
 
 func TestRoleEngine_Registration(t *testing.T) {

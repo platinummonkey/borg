@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/platinummonkey/agent-chat/internal/agent"
-	"github.com/platinummonkey/agent-chat/internal/config"
-	"github.com/platinummonkey/agent-chat/pkg/protocol"
-	"github.com/platinummonkey/agent-chat/test/mock"
+	"github.com/platinummonkey/borg/internal/agent"
+	"github.com/platinummonkey/borg/internal/config"
+	"github.com/platinummonkey/borg/pkg/protocol"
+	"github.com/platinummonkey/borg/test/mock"
 )
 
 // ---------- Phase 12: Task Board ----------

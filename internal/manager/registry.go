@@ -4,9 +4,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/platinummonkey/agent-chat/internal/agent"
-	"github.com/platinummonkey/agent-chat/internal/cost"
-	"github.com/platinummonkey/agent-chat/internal/spawner"
+	"github.com/platinummonkey/borg/internal/agent"
+	"github.com/platinummonkey/borg/internal/cost"
+	"github.com/platinummonkey/borg/internal/spawner"
 )
 
 // AgentRecord tracks all known information about an agent.

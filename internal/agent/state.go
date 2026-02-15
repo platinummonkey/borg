@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/platinummonkey/agent-chat/pkg/protocol"
+	"github.com/platinummonkey/borg/pkg/protocol"
 )
 
 // TaskStatus represents the current status of a tracked task.

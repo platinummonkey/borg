@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/platinummonkey/agent-chat/internal/agent"
-	"github.com/platinummonkey/agent-chat/internal/cost"
-	"github.com/platinummonkey/agent-chat/internal/logging"
-	"github.com/platinummonkey/agent-chat/internal/spawner"
-	"github.com/platinummonkey/agent-chat/pkg/ircclient"
-	"github.com/platinummonkey/agent-chat/pkg/protocol"
+	"github.com/platinummonkey/borg/internal/agent"
+	"github.com/platinummonkey/borg/internal/cost"
+	"github.com/platinummonkey/borg/internal/logging"
+	"github.com/platinummonkey/borg/internal/spawner"
+	"github.com/platinummonkey/borg/pkg/ircclient"
+	"github.com/platinummonkey/borg/pkg/protocol"
 )
 
 // Manager is the central management plane for observing and controlling agents.

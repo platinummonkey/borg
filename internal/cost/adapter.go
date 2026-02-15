@@ -3,8 +3,8 @@ package cost
 import (
 	"fmt"
 
-	"github.com/platinummonkey/agent-chat/pkg/ircclient"
-	"github.com/platinummonkey/agent-chat/pkg/protocol"
+	"github.com/platinummonkey/borg/pkg/ircclient"
+	"github.com/platinummonkey/borg/pkg/protocol"
 )
 
 // UsageReport contains LLM usage data for a single request or session.

@@ -8,7 +8,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-const tracerName = "github.com/platinummonkey/agent-chat/internal/agent"
+const tracerName = "github.com/platinummonkey/borg/internal/agent"
 
 // tracer returns the package-level OTel tracer.
 func tracer() trace.Tracer {
