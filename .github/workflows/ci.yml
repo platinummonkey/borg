@@ -16,8 +16,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: stable
+          go-version-file: go.mod
       - uses: golangci/golangci-lint-action@v6
+        with:
+          version: v2.11.4
 
   test:
     name: Test
@@ -26,7 +28,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: stable
+          go-version-file: go.mod
       - run: go test -race -count=1 ./...
 
   build:
@@ -36,5 +38,5 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: stable
+          go-version-file: go.mod
       - run: make build
