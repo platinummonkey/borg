@@ -71,7 +71,7 @@ func getFreePort(t *testing.T) int {
 		t.Fatalf("get free port: %v", err)
 	}
 	port := ln.Addr().(*net.TCPAddr).Port
-	ln.Close()
+	_ = ln.Close()
 	return port
 }
 
@@ -467,7 +467,7 @@ func TestE2E_Discovery_Dashboard(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GET /discovery: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {

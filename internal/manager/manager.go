@@ -420,7 +420,7 @@ func (m *Manager) pollSingleAgent(nick, dashboardURL string) {
 		slog.Debug("poll health failed", "nick", nick, "error", err)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var health agent.HealthStatus
 	if err := json.NewDecoder(resp.Body).Decode(&health); err == nil {

@@ -671,7 +671,7 @@ func TestDashboardEndpoints(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GET /health failed: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	body, _ := io.ReadAll(resp.Body)
 	var health HealthStatus
 	if err := json.Unmarshal(body, &health); err != nil {
@@ -686,7 +686,7 @@ func TestDashboardEndpoints(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GET /metrics failed: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	body, _ = io.ReadAll(resp.Body)
 	var metrics MetricsSnapshot
 	if err := json.Unmarshal(body, &metrics); err != nil {
@@ -707,7 +707,7 @@ func TestDashboardEndpoints(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GET /tasks failed: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	body, _ = io.ReadAll(resp.Body)
 	var tasks []*TaskInfo
 	if err := json.Unmarshal(body, &tasks); err != nil {
@@ -729,7 +729,7 @@ func TestDashboardEndpoints(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GET /messages failed: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	body, _ = io.ReadAll(resp.Body)
 	var messages []MessageLogEntry
 	if err := json.Unmarshal(body, &messages); err != nil {
