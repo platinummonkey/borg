@@ -17,7 +17,9 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      - uses: golangci/golangci-lint-action@v6
+      # golangci-lint-action@v7+ is required for golangci-lint v2.x (go1.25+ support).
+      # v6 only supports v1.x and would fail with go 1.25.0 module targets.
+      - uses: golangci/golangci-lint-action@v7
         with:
           version: v2.11.4
 
