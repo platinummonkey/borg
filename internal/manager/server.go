@@ -272,9 +272,9 @@ func serveWS(hub *Hub, w http.ResponseWriter, r *http.Request) {
 			if !ok {
 				return
 			}
-			w.Write([]byte("data: "))
-			w.Write(msg)
-			w.Write([]byte("\n\n"))
+			_, _ = w.Write([]byte("data: "))
+			_, _ = w.Write(msg)
+			_, _ = w.Write([]byte("\n\n"))
 			flusher.Flush()
 		case <-ctx.Done():
 			return

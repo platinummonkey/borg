@@ -129,7 +129,9 @@ func TestLocalSpawner_SpawnAndStop(t *testing.T) {
 	// Trick: spawn "sleep 60" by building a temp script.
 	dir := t.TempDir()
 	script := filepath.Join(dir, "agent.sh")
-	os.WriteFile(script, []byte("#!/bin/sh\nsleep 60\n"), 0755)
+	if err := os.WriteFile(script, []byte("#!/bin/sh\nsleep 60\n"), 0755); err != nil {
+		t.Fatalf("write script: %v", err)
+	}
 	cfg.BinaryPath = script
 
 	ctx := context.Background()

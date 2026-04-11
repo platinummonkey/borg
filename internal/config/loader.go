@@ -111,7 +111,7 @@ func Load(args []string) (*AppConfig, error) {
 	// Parse flags (but don't apply yet — we need to know what was explicitly set).
 	fs := flag.NewFlagSet("borg", flag.ContinueOnError)
 	fs.Usage = func() {
-		fmt.Fprintf(fs.Output(), "Usage: borg [flags]\n\nFlags:\n")
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: borg [flags]\n\nFlags:\n")
 		fs.PrintDefaults()
 	}
 	var (

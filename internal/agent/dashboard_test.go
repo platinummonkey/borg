@@ -78,7 +78,7 @@ func TestDashboard_Health(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != 200 {
 		t.Errorf("status = %d, want 200", resp.StatusCode)
@@ -108,7 +108,7 @@ func TestDashboard_Metrics(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var snap MetricsSnapshot
 	if err := json.NewDecoder(resp.Body).Decode(&snap); err != nil {

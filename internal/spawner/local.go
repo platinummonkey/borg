@@ -87,7 +87,7 @@ func (s *LocalSpawner) PostSpawn(ctx context.Context, inst *AgentInstance) error
 		client := &http.Client{Timeout: 2 * time.Second}
 		resp, err := client.Get(url)
 		if err == nil {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			if resp.StatusCode == http.StatusOK {
 				inst.Status = StatusRunning
 				return nil
@@ -130,7 +130,12 @@ func (s *LocalSpawner) Stop(ctx context.Context, inst *AgentInstance) error {
 		}
 		select {
 		case <-ctx.Done():
-			break
+			// ctx.Done fires inside a select inside a for loop; break exits
+			// the select, not the outer loop. The loop condition (time.Now().Before(deadline))
+			// will not re-enter on the next iteration because we return ctx.Err() below.
+			inst.Status = StatusStopped
+			inst.StoppedAt = time.Now()
+			return ctx.Err()
 		case <-time.After(250 * time.Millisecond):
 		}
 	}

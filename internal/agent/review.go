@@ -135,9 +135,10 @@ func (rs *ReviewStore) Summary(task string) ReviewSummary {
 	s := ReviewSummary{Task: task}
 	for _, r := range rs.reviews[task] {
 		s.TotalReviews++
-		if r.Verdict == "" {
+		switch r.Verdict {
+		case "":
 			s.PendingReviews++
-		} else if r.Verdict == ReviewApproved {
+		case ReviewApproved:
 			s.ApprovedReviews++
 		}
 	}

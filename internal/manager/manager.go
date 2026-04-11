@@ -339,7 +339,7 @@ func (m *Manager) dispatchToStores(msg *protocol.Message) {
 	case protocol.ActionClaim:
 		load := 0
 		if l := msg.Get("load"); l != "" {
-			fmt.Sscanf(l, "%d", &load)
+			_, _ = fmt.Sscanf(l, "%d", &load)
 		}
 		m.taskBoard.RecordClaim(task, msg.Nick, load)
 	case protocol.ActionAssign:
@@ -433,7 +433,7 @@ func (m *Manager) pollSingleAgent(nick, dashboardURL string) {
 	if err != nil {
 		return
 	}
-	defer resp2.Body.Close()
+	defer func() { _ = resp2.Body.Close() }()
 
 	var metrics agent.MetricsSnapshot
 	if err := json.NewDecoder(resp2.Body).Decode(&metrics); err == nil {
