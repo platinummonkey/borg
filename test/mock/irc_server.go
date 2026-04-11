@@ -84,10 +84,10 @@ func (s *IRCServer) Close() {
 	s.mu.Lock()
 	s.closed = true
 	s.mu.Unlock()
-	s.listener.Close()
+	_ = s.listener.Close()
 	s.mu.Lock()
 	for _, c := range s.clients {
-		c.conn.Close()
+		_ = c.conn.Close()
 	}
 	s.mu.Unlock()
 }
@@ -175,7 +175,7 @@ func (s *IRCServer) broadcastToChannel(channel, msg string, sender *mockClient) 
 func (mc *mockClient) handleConnection() {
 	defer func() {
 		mc.server.removeClient(mc)
-		mc.conn.Close()
+		_ = mc.conn.Close()
 	}()
 
 	saslAuthenticated := false
@@ -269,10 +269,7 @@ func (mc *mockClient) handleConnection() {
 		case "PRIVMSG":
 			if len(parts) >= 3 {
 				target := parts[1]
-				msg := strings.Join(parts[2:], " ")
-				if strings.HasPrefix(msg, ":") {
-					msg = msg[1:]
-				}
+				msg := strings.TrimPrefix(strings.Join(parts[2:], " "), ":")
 				fullMsg := fmt.Sprintf(":%s!%s@localhost PRIVMSG %s :%s", mc.nick, mc.user, target, msg)
 
 				if strings.HasPrefix(target, "#") {
@@ -324,8 +321,8 @@ func (mc *mockClient) sendWelcome() {
 }
 
 func (mc *mockClient) send(msg string) {
-	mc.conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
-	mc.conn.Write([]byte(msg + "\r\n"))
+	_ = mc.conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+	_, _ = mc.conn.Write([]byte(msg + "\r\n"))
 }
 
 func (s *IRCServer) validateSASL(encoded string) bool {

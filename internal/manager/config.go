@@ -71,7 +71,7 @@ func LoadConfig(args []string) (*ManagerConfig, error) {
 
 	fs := flag.NewFlagSet("queen", flag.ContinueOnError)
 	fs.Usage = func() {
-		fmt.Fprintf(fs.Output(), "Usage: queen [flags]\n\nFlags:\n")
+		_, _ = fmt.Fprintf(fs.Output(), "Usage: queen [flags]\n\nFlags:\n")
 		fs.PrintDefaults()
 	}
 

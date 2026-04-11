@@ -78,7 +78,7 @@ func TestDashboard_Health(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != 200 {
 		t.Errorf("status = %d, want 200", resp.StatusCode)
@@ -108,7 +108,7 @@ func TestDashboard_Metrics(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var snap MetricsSnapshot
 	if err := json.NewDecoder(resp.Body).Decode(&snap); err != nil {
@@ -131,7 +131,7 @@ func TestDashboard_Tasks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var tasks []TaskInfo
 	if err := json.NewDecoder(resp.Body).Decode(&tasks); err != nil {
@@ -151,7 +151,7 @@ func TestDashboard_Tasks_Empty(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var tasks []TaskInfo
 	if err := json.NewDecoder(resp.Body).Decode(&tasks); err != nil {
@@ -171,7 +171,7 @@ func TestDashboard_Dependencies(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var graph []TaskGraphNode
 	if err := json.NewDecoder(resp.Body).Decode(&graph); err != nil {
@@ -191,7 +191,7 @@ func TestDashboard_Agents(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var agents []AgentActivitySummary
 	if err := json.NewDecoder(resp.Body).Decode(&agents); err != nil {
@@ -211,7 +211,7 @@ func TestDashboard_Context(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var entries []ContextEntry
 	if err := json.NewDecoder(resp.Body).Decode(&entries); err != nil {
@@ -231,7 +231,7 @@ func TestDashboard_Messages(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var messages []MessageLogEntry
 	if err := json.NewDecoder(resp.Body).Decode(&messages); err != nil {
@@ -251,7 +251,7 @@ func TestDashboard_Index(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != 200 {
 		t.Errorf("status = %d, want 200", resp.StatusCode)
